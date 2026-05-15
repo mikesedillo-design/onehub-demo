@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OneHub — AI-Powered Status Hub Demo</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #0C2340;
+    --blue: #0052CC;
+    --green: #006B35;
+    --red: #D52B1E;
+    --light-green: #00875A;
+    --yellow: #FF991F;
+    --bg-dark: #080F1A;
+    --text-white: #FFFFFF;
+    --text-muted: #8FA3BF;
+    --card-bg: #0F1E35;
+    --font: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    font-family: var(--font);
+    background: var(--bg-dark);
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ─── STAGE ─────────────────────────────────────────── */
+  #stage {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ─── SCENES ─────────────────────────────────────────── */
+  .scene {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.6s ease;
+  }
+  .scene.active { opacity: 1; pointer-events: auto; }
+
+  /* ─── SCENE 1: PROBLEM ───────────────────────────────── */
+  #s1 { background: #000; }
+  .problem-line {
+    font-size: clamp(28px, 5vw, 72px);
+    font-weight: 700;
+    color: #fff;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    line-height: 1.15;
+  }
+  .problem-line.big {
+    font-size: clamp(56px, 10vw, 140px);
+    color: var(--red);
+    font-weight: 900;
+    letter-spacing: -2px;
+  }
+  .problem-line.sub {
+    font-size: clamp(18px, 2.5vw, 36px);
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .problem-line.final {
+    font-size: clamp(22px, 3.5vw, 52px);
+    color: var(--blue);
+    font-weight: 600;
+  }
+  .problem-line.show {
+    opacity: 1; transform: translateY(0);
+  }
+  #s1 .stack { display: flex; flex-direction: column; gap: 18px; align-items: center; }
+
+  /* ─── SCENE 2: INPUT ─────────────────────────────────── */
+  #s2 { background: var(--bg-dark); }
+  .app-shell {
+    width: min(820px, 96vw);
+    background: #f4f5f7;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.7);
+    transform: translateY(30px);
+    opacity: 0;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .app-shell.show { opacity: 1; transform: translateY(0); }
+
+  .topbar {
+    background: var(--navy);
+    padding: 14px 24px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .topbar-logo {
+    color: #fff; font-size: 18px; font-weight: 700; letter-spacing: 0.5px;
+  }
+  .topbar-badge {
+    background: var(--blue); color: #fff;
+    font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+    letter-spacing: 1px;
+  }
+
+  .progress-bar-steps {
+    background: var(--navy);
+    padding: 10px 24px 14px;
+    display: flex; align-items: center; gap: 0;
+  }
+  .step {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 600; color: #5E7895;
+  }
+  .step.active { color: #fff; }
+  .step.done { color: #4CAF85; }
+  .step-num {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #1a3455; color: #5E7895;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+  }
+  .step.active .step-num { background: var(--blue); color: #fff; }
+  .step.done .step-num { background: #006B35; color: #fff; }
+  .step-arrow { margin: 0 10px; color: #3a5470; font-size: 14px; }
+
+  .app-body { padding: 28px 32px; }
+  .field-label { font-size: 13px; font-weight: 600; color: #42526E; margin-bottom: 6px; }
+  .field-label span { color: var(--red); margin-left: 2px; }
+
+  .project-select {
+    width: 100%;
+    border: 2px solid #DFE1E6;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 14px; font-weight: 600; color: #172B4D;
+    background: #fff;
+    appearance: none;
+    cursor: pointer;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .select-wrap { position: relative; }
+  .select-wrap::after {
+    content: '▾';
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    color: #5E6C84; pointer-events: none;
+  }
+
+  .textarea-box {
+    width: 100%;
+    border: 2px solid #DFE1E6;
+    border-radius: 6px;
+    padding: 14px;
+    font-size: 14px; line-height: 1.6; color: #172B4D;
+    background: #fff;
+    min-height: 120px;
+    resize: none;
+    font-family: var(--font);
+    outline: none;
+    transition: border-color 0.2s;
+    white-space: pre-wrap;
+  }
+  .textarea-box.focused { border-color: var(--blue); }
+  .cursor { display: inline-block; width: 2px; height: 16px; background: var(--blue); vertical-align: middle; animation: blink 0.7s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  .char-count { font-size: 11px; color: #8993A4; text-align: right; margin-top: 4px; }
+
+  .parse-btn {
+    margin-top: 20px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 13px 28px;
+    font-size: 15px; font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .parse-btn .sparkle {
+    font-size: 16px;
+    font-family: Georgia, serif;
+    letter-spacing: 0;
+    opacity: 0.9;
+    font-weight: 400;
+    line-height: 1;
+  }
+  .parse-btn.pulse { animation: pulse-btn 0.8s ease infinite alternate; }
+  @keyframes pulse-btn {
+    from { box-shadow: 0 0 0 0 rgba(0,82,204,0.4); }
+    to { box-shadow: 0 0 0 12px rgba(0,82,204,0); transform: scale(1.03); }
+  }
+  .parse-btn.clicked { transform: scale(0.95); background: #003d99; }
+
+  /* ─── SCENE 3: PARSING ───────────────────────────────── */
+  #s3 { background: var(--bg-dark); }
+  .parsing-shell {
+    width: min(820px, 96vw);
+    background: var(--card-bg);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.7);
+    opacity: 0; transform: translateY(30px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .parsing-shell.show { opacity: 1; transform: translateY(0); }
+
+  .parsing-header {
+    background: var(--navy);
+    padding: 14px 24px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .parsing-title { color: #fff; font-size: 15px; font-weight: 600; }
+  .ai-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--blue); animation: ai-pulse 1s ease infinite alternate;
+  }
+  @keyframes ai-pulse { from{opacity:0.4;transform:scale(0.8)} to{opacity:1;transform:scale(1.2)} }
+
+  .parsing-body { padding: 28px 32px; }
+  .parsing-status {
+    display: flex; align-items: center; gap: 14px;
+    font-size: 16px; color: #8FA3BF; margin-bottom: 28px;
+  }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 3px solid #1a3455;
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .field-rows { display: flex; flex-direction: column; gap: 14px; }
+  .field-row {
+    display: flex; align-items: center; gap: 14px;
+    background: #0a1628; border-radius: 8px; padding: 14px 18px;
+    opacity: 0; transform: translateX(-20px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  .field-row.show { opacity: 1; transform: translateX(0); }
+  .field-icon { font-size: 22px; width: 30px; text-align: center; }
+  .field-content { flex: 1; }
+  .field-name { font-size: 11px; font-weight: 700; color: #5E7895; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .field-value { font-size: 15px; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 8px; }
+  .rag-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(213,43,30,0.2); border: 1.5px solid var(--red);
+    color: var(--red); font-size: 13px; font-weight: 700;
+    padding: 3px 12px; border-radius: 20px;
+  }
+  .progress-pill {
+    background: rgba(0,82,204,0.2); border: 1.5px solid var(--blue);
+    color: #4d9fff; font-size: 13px; font-weight: 700;
+    padding: 3px 12px; border-radius: 20px;
+  }
+  .p1-pill {
+    background: rgba(255,153,31,0.15); border: 1.5px solid var(--yellow);
+    color: var(--yellow); font-size: 13px; font-weight: 700;
+    padding: 3px 12px; border-radius: 20px;
+  }
+  .typewriter-val { display: inline; }
+  .mini-cursor { display: inline-block; width: 2px; height: 14px; background: var(--blue); vertical-align: middle; animation: blink 0.6s infinite; margin-left: 2px; }
+
+  /* ─── SCENE 4: WRITING ───────────────────────────────── */
+  #s4 { background: var(--bg-dark); }
+  .writing-shell {
+    width: min(820px, 96vw);
+    background: var(--card-bg);
+    border-radius: 12px; overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.7);
+    opacity: 0; transform: translateY(30px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .writing-shell.show { opacity: 1; transform: translateY(0); }
+  .writing-header {
+    background: var(--navy); padding: 14px 24px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .writing-title { color: #fff; font-size: 15px; font-weight: 600; }
+  .writing-body { padding: 32px; }
+  .writing-status { font-size: 15px; color: #8FA3BF; margin-bottom: 28px; text-align: center; }
+  .channel-cards { display: flex; gap: 20px; }
+  .channel-card {
+    flex: 1; background: #0a1628; border-radius: 10px;
+    padding: 24px 20px;
+    border: 1.5px solid #1a3455;
+    opacity: 0; transform: translateY(20px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  .channel-card.show { opacity: 1; transform: translateY(0); }
+  .channel-card.done { border-color: var(--light-green); }
+
+  .channel-icon { font-size: 32px; margin-bottom: 12px; }
+  .channel-name { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .channel-detail { font-size: 12px; color: #5E7895; margin-bottom: 18px; }
+  .channel-status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #8FA3BF; }
+  .writing-dots span {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--blue); margin: 0 2px;
+    animation: bounce 0.9s infinite ease-in-out;
+  }
+  .writing-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .writing-dots span:nth-child(3) { animation-delay: 0.30s; }
+  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+
+  /* ─── SVG CHECK ANIMATION ───────────────────────────── */
+  .check-svg-wrap {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px;
+  }
+  .check-svg-wrap svg { overflow: visible; }
+  .check-circle {
+    stroke-dasharray: 66;
+    stroke-dashoffset: 66;
+    animation: draw-circle 0.4s ease forwards;
+  }
+  .check-tick {
+    stroke-dasharray: 18;
+    stroke-dashoffset: 18;
+    animation: draw-tick 0.3s ease 0.35s forwards;
+  }
+  @keyframes draw-circle { to { stroke-dashoffset: 0; } }
+  @keyframes draw-tick   { to { stroke-dashoffset: 0; } }
+  .check-icon { font-size: 20px; }
+  .done-text { color: var(--light-green); font-weight: 600; }
+
+  /* ─── SCENE 5: DONE ──────────────────────────────────── */
+  #s5 { background: var(--bg-dark); }
+  .done-shell {
+    width: min(820px, 96vw);
+    background: var(--card-bg);
+    border-radius: 12px; overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.7);
+    opacity: 0; transform: translateY(30px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .done-shell.show { opacity: 1; transform: translateY(0); }
+  .done-banner {
+    background: #013220;
+    border-bottom: 2px solid var(--light-green);
+    padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .done-banner-left { display: flex; align-items: center; gap: 12px; }
+  .done-check { font-size: 24px; }
+  .done-text-main { font-size: 18px; font-weight: 700; color: #fff; }
+  .done-text-sub { font-size: 13px; color: #4CAF85; font-weight: 600; }
+  .done-time-saved { font-size: 14px; color: #4CAF85; font-weight: 700; background: rgba(76,175,133,0.15); border: 1px solid #4CAF85; padding: 6px 14px; border-radius: 20px; }
+
+  .done-body { padding: 24px 28px; }
+  .summary-card {
+    background: var(--navy);
+    border-radius: 10px; padding: 20px 24px; margin-bottom: 20px;
+    opacity: 0; transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .summary-card.show { opacity: 1; transform: translateY(0); }
+  .summary-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .summary-card-title { font-size: 13px; font-weight: 700; color: #5E7895; text-transform: uppercase; letter-spacing: 1px; }
+  .summary-project { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 12px; }
+  .summary-pills { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .summary-body-text { font-size: 13px; color: #8FA3BF; line-height: 1.6; margin-bottom: 10px; }
+  .summary-body-text strong { color: #fff; }
+
+  .whats-next-header {
+    font-size: 13px; font-weight: 700; color: #5E7895; text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  .action-cards { display: flex; gap: 12px; }
+  .action-card {
+    flex: 1; border-radius: 8px; padding: 14px 16px;
+    border: 1.5px solid #1a3455; background: #0a1628;
+    cursor: pointer; position: relative;
+    opacity: 0; transform: translateY(16px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  .action-card.show { opacity: 1; transform: translateY(0); }
+  .action-card.glow {
+    border-color: var(--red);
+    box-shadow: 0 0 20px rgba(213,43,30,0.35);
+    animation: card-pulse 2s ease infinite alternate;
+  }
+  @keyframes card-pulse {
+    from { box-shadow: 0 0 10px rgba(213,43,30,0.2); }
+    to { box-shadow: 0 0 28px rgba(213,43,30,0.6); }
+  }
+  .action-badge {
+    position: absolute; top: -10px; right: 12px;
+    background: var(--red); color: #fff;
+    font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.5px;
+  }
+  .action-icon { font-size: 22px; margin-bottom: 8px; }
+  .action-title { font-size: 13px; font-weight: 700; color: #fff; }
+  .action-desc { font-size: 11px; color: #5E7895; margin-top: 3px; }
+
+  /* ─── SCENE 6: SPLIT ─────────────────────────────────── */
+  #s6 { background: #000; display: flex; flex-direction: row; padding: 0; }
+  #s6 .half {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 40px;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+  }
+  #s6 .half.show { opacity: 1; }
+  #s6 .before { background: rgba(213,43,30,0.1); border-right: 1px solid #2a0a08; }
+  #s6 .after { background: rgba(0,107,53,0.1); }
+  .split-label {
+    font-size: clamp(32px, 5vw, 64px); font-weight: 900; margin-bottom: 28px;
+  }
+  .split-label.red { color: var(--red); }
+  .split-label.green { color: #4CAF85; }
+  .split-items { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 320px; }
+  .split-item {
+    display: flex; align-items: center; gap: 12px;
+    font-size: clamp(14px, 2vw, 18px); font-weight: 600; color: #fff;
+  }
+  .split-item .ico { font-size: 22px; }
+
+  /* ─── SCENE 7: CLOSING ───────────────────────────────── */
+  #s7 { background: var(--bg-dark); flex-direction: column; gap: 16px; }
+  .closing-logo {
+    font-size: clamp(48px, 8vw, 96px); font-weight: 900;
+    color: #fff; letter-spacing: -2px;
+    opacity: 0; transform: scale(0.85);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .closing-logo span { color: var(--blue); }
+  .closing-logo.show { opacity: 1; transform: scale(1); }
+  .closing-sub {
+    font-size: clamp(16px, 2.5vw, 28px); color: var(--text-muted); font-weight: 400;
+    opacity: 0; transition: opacity 0.7s ease 0.3s;
+  }
+  .closing-sub.show { opacity: 1; }
+  .closing-event {
+    font-size: clamp(13px, 1.8vw, 18px); color: var(--blue); font-weight: 600;
+    letter-spacing: 0.5px; margin-top: 8px;
+    opacity: 0; transition: opacity 0.7s ease 0.6s;
+  }
+  .closing-event.show { opacity: 1; }
+  .closing-tagline {
+    margin-top: 24px;
+    font-size: clamp(18px, 3vw, 38px); font-weight: 700; color: #fff;
+    text-align: center; line-height: 1.3;
+    opacity: 0; transition: opacity 0.7s ease 0.9s;
+  }
+  .closing-tagline.show { opacity: 1; }
+  .closing-tagline span { color: var(--blue); }
+
+  /* ─── TIMELINE PROGRESS BAR ──────────────────────────── */
+  #progress-wrap {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 6px; background: rgba(255,255,255,0.08);
+    z-index: 1000;
+  }
+  #progress-fill {
+    height: 100%; background: linear-gradient(90deg, var(--blue), #4d9fff);
+    width: 0%; transition: width 0.3s linear;
+    box-shadow: 0 0 8px rgba(77,159,255,0.6);
+  }
+
+  /* ─── CONTROLS ───────────────────────────────────────── */
+  #controls {
+    position: fixed; top: 16px; right: 20px;
+    display: flex; gap: 10px; z-index: 1001;
+  }
+  .ctrl-btn {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff; font-size: 13px; font-weight: 600;
+    padding: 8px 16px; border-radius: 20px; cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: background 0.2s;
+  }
+  .ctrl-btn:hover { background: rgba(255,255,255,0.2); }
+
+  /* ─── SCENE LABEL ────────────────────────────────────── */
+  #scene-label {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.35);
+    letter-spacing: 1px; text-transform: uppercase;
+    z-index: 1001;
+  }
+
+  /* ─── TIMER ──────────────────────────────────────────── */
+  #timer {
+    position: fixed; bottom: 18px; left: 20px;
+    font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.3);
+    font-variant-numeric: tabular-nums;
+    z-index: 1001;
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <!-- SCENE 1: PROBLEM -->
+  <div class="scene" id="s1">
+    <div class="stack">
+      <div class="problem-line sub" id="p0">7–10 times a week...</div>
+      <div class="problem-line big" id="p1">3–6 min</div>
+      <div class="problem-line" id="p2">per update, per tool</div>
+      <div class="problem-line sub" id="p3">Same information. Over and over. ~76 min lost weekly.</div>
+      <div class="problem-line final" id="p4">There has to be a better way.</div>
+    </div>
+  </div>
+
+  <!-- SCENE 2: INPUT -->
+  <div class="scene" id="s2">
+    <div class="app-shell" id="app-shell">
+      <div class="topbar">
+        <div class="topbar-logo">OneHub</div>
+        <div class="topbar-badge">AI BETA</div>
+      </div>
+      <div class="progress-bar-steps">
+        <div class="step active" id="st1"><div class="step-num">1</div> Write Update</div>
+        <div class="step-arrow">›</div>
+        <div class="step" id="st2"><div class="step-num">2</div> Review &amp; Confirm</div>
+        <div class="step-arrow">›</div>
+        <div class="step" id="st3"><div class="step-num">3</div> Published</div>
+      </div>
+      <div class="app-body">
+        <div class="field-label">Project <span>*</span></div>
+        <div class="select-wrap">
+          <div class="project-select" id="proj-select">Select a project...</div>
+        </div>
+        <div class="field-label">Your update <span>*</span></div>
+        <div class="textarea-box focused" id="textarea-box"><span id="typed-text"></span><span class="cursor" id="cursor"></span></div>
+        <div class="char-count"><span id="char-num">0</span> / 500 characters</div>
+        <button class="parse-btn" id="parse-btn">
+          <span class="sparkle">✦</span> Parse with AI
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 3: PARSING -->
+  <div class="scene" id="s3">
+    <div class="parsing-shell" id="parsing-shell">
+      <div class="parsing-header">
+        <div class="ai-dot"></div>
+        <div class="parsing-title">Claude is reading your update...</div>
+      </div>
+      <div class="parsing-body">
+        <div class="parsing-status">
+          <div class="spinner" id="parse-spinner"></div>
+          <span id="parse-status-text">Analyzing update...</span>
+        </div>
+        <div class="field-rows">
+          <div class="field-row" id="fr1">
+            <div class="field-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" stroke="#8FA3BF" stroke-width="1.5"/><circle cx="10" cy="10" r="3.5" fill="#8FA3BF"/></svg></div>
+            <div class="field-content">
+              <div class="field-name">RAG Status</div>
+              <div class="field-value"><span class="rag-badge"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--red);flex-shrink:0;"></span> RED</span></div>
+            </div>
+          </div>
+          <div class="field-row" id="fr2">
+            <div class="field-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="12" width="4" height="6" rx="1" fill="#8FA3BF"/><rect x="8" y="8" width="4" height="10" rx="1" fill="#8FA3BF"/><rect x="14" y="4" width="4" height="14" rx="1" fill="#8FA3BF"/></svg></div>
+            <div class="field-content">
+              <div class="field-name">Progress</div>
+              <div class="field-value"><span class="progress-pill">70% Complete</span></div>
+            </div>
+          </div>
+          <div class="field-row" id="fr3">
+            <div class="field-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 2L12.5 7.5L18 8.3L14 12.2L14.9 18L10 15.3L5.1 18L6 12.2L2 8.3L7.5 7.5L10 2Z" stroke="#8FA3BF" stroke-width="1.5" stroke-linejoin="round" fill="none"/></svg></div>
+            <div class="field-content">
+              <div class="field-name">Priority</div>
+              <div class="field-value"><span class="p1-pill"><svg width="11" height="14" viewBox="0 0 11 14" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;margin-right:3px;margin-top:-1px"><path d="M7 1L1 8h4.5L4 13l6-7H5.5L7 1z" fill="#FF991F" stroke="#FF991F" stroke-width="0.5" stroke-linejoin="round"/></svg>P1</span></div>
+            </div>
+          </div>
+          <div class="field-row" id="fr4">
+            <div class="field-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" stroke="#8FA3BF" stroke-width="1.5"/><line x1="6" y1="6" x2="14" y2="14" stroke="#8FA3BF" stroke-width="1.5" stroke-linecap="round"/><line x1="14" y1="6" x2="6" y2="14" stroke="#8FA3BF" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+            <div class="field-content">
+              <div class="field-name">Blocker</div>
+              <div class="field-value"><span class="typewriter-val" id="tw1"></span><span class="mini-cursor" id="mc1"></span></div>
+            </div>
+          </div>
+          <div class="field-row" id="fr5">
+            <div class="field-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" stroke="#8FA3BF" stroke-width="1.5"/><path d="M8 7l4 3-4 3" stroke="#8FA3BF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="field-content">
+              <div class="field-name">Next Steps</div>
+              <div class="field-value"><span class="typewriter-val" id="tw2"></span><span class="mini-cursor" id="mc2"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 4: WRITING -->
+  <div class="scene" id="s4">
+    <div class="writing-shell" id="writing-shell">
+      <div class="writing-header">
+        <div class="ai-dot"></div>
+        <div class="writing-title">Publishing to 2 channels simultaneously...</div>
+      </div>
+      <div class="writing-body">
+        <div class="writing-status">Sending your update to connected systems</div>
+        <div class="channel-cards">
+          <div class="channel-card" id="cc1">
+            <div class="channel-icon"><svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="36" height="36" rx="8" fill="#0052CC"/><text x="18" y="24" font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif" font-size="18" font-weight="700" fill="white" text-anchor="middle">J</text></svg></div>
+            <div class="channel-name">Jira</div>
+            <div class="channel-detail">CGCX-1246 · CK/TT Overlap Dashboard</div>
+            <div class="channel-status" id="jira-status">
+              <div class="writing-dots"><span></span><span></span><span></span></div>
+              <span>writing comment...</span>
+            </div>
+          </div>
+          <div class="channel-card" id="cc2">
+            <div class="channel-icon"><svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="36" height="36" rx="8" fill="#0B6E4F"/><rect x="8" y="8" width="7" height="7" rx="1" fill="white" opacity="0.9"/><rect x="17" y="8" width="11" height="7" rx="1" fill="white" opacity="0.9"/><rect x="8" y="17" width="11" height="7" rx="1" fill="white" opacity="0.9"/><rect x="21" y="17" width="7" height="7" rx="1" fill="white" opacity="0.9"/><rect x="8" y="26" width="7" height="2" rx="1" fill="white" opacity="0.9"/><rect x="17" y="26" width="11" height="2" rx="1" fill="white" opacity="0.9"/></svg></div>
+            <div class="channel-name">Smartsheet</div>
+            <div class="channel-detail">FY26 CGPM Project Tracker</div>
+            <div class="channel-status" id="ss-status">
+              <div class="writing-dots"><span></span><span></span><span></span></div>
+              <span>updating row...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 5: DONE -->
+  <div class="scene" id="s5">
+    <div class="done-shell" id="done-shell">
+      <div class="done-banner">
+        <div class="done-banner-left">
+          <div class="done-check"><svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14" r="12" stroke="#00875A" stroke-width="2" fill="rgba(0,107,53,0.15)"/><path d="M8.5 14.5l4.5 4.5 7.5-9" stroke="#4CAF85" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
+          <div>
+            <div class="done-text-main">Update published successfully</div>
+            <div class="done-text-sub">Both systems updated • AI summary generated</div>
+          </div>
+        </div>
+        <div class="done-time-saved">~9 min saved this update · ~76 min/week across 7–10 updates</div>
+      </div>
+      <div class="done-body">
+        <div class="summary-card" id="sum-card">
+          <div class="summary-card-header">
+            <div class="summary-card-title">Leadership Summary</div>
+            <div style="font-size:11px;color:#5E7895;">Auto-generated · Claude AI</div>
+          </div>
+          <div class="summary-project">CK/TT Overlap Dashboard</div>
+          <div class="summary-pills">
+            <span class="rag-badge"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--red);flex-shrink:0;"></span> RED</span>
+            <span class="progress-pill">70% IN PROGRESS</span>
+            <span class="p1-pill"><svg width="11" height="14" viewBox="0 0 11 14" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;margin-right:3px;margin-top:-1px"><path d="M7 1L1 8h4.5L4 13l6-7H5.5L7 1z" fill="#FF991F" stroke="#FF991F" stroke-width="0.5" stroke-linejoin="round"/></svg>P1</span>
+          </div>
+          <div class="summary-body-text"><strong>Status:</strong> Dashboard 70% done. Blocked on API credentials from IT — timeline at risk.</div>
+          <div class="summary-body-text"><strong>Key Blocker:</strong> API credentials from IT — escalation needed</div>
+          <div class="summary-body-text"><strong>Next Steps:</strong> Escalate to IT leadership today</div>
+        </div>
+        <div class="whats-next-header">What's Next?</div>
+        <div class="action-cards">
+          <div class="action-card glow" id="ac1">
+            <div class="action-badge">FOR RED STATUS</div>
+            <div class="action-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 4v14M14 4l-5 5M14 4l5 5" stroke="#D52B1E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="6" y1="22" x2="22" y2="22" stroke="#D52B1E" stroke-width="2" stroke-linecap="round"/></svg></div>
+            <div class="action-title">Escalate to leadership</div>
+            <div class="action-desc">Draft escalation message → CGPM agent</div>
+          </div>
+          <div class="action-card" id="ac2">
+            <div class="action-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="22" height="15" rx="2" stroke="#8FA3BF" stroke-width="1.6" fill="none"/><line x1="14" y1="20" x2="14" y2="24" stroke="#8FA3BF" stroke-width="1.6" stroke-linecap="round"/><line x1="9" y1="24" x2="19" y2="24" stroke="#8FA3BF" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+            <div class="action-title">Make slides</div>
+            <div class="action-desc">Auto-generate status deck → Slides agent</div>
+          </div>
+          <div class="action-card" id="ac3">
+            <div class="action-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="7" stroke="#8FA3BF" stroke-width="1.6" fill="none"/><line x1="17.5" y1="17.5" x2="24" y2="24" stroke="#8FA3BF" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <div class="action-title">Dig into Slack</div>
+            <div class="action-desc">Search threads for context → KB agent</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 6: SPLIT SCREEN -->
+  <div class="scene" id="s6">
+    <div class="half before" id="before-half">
+      <div class="split-label red">BEFORE</div>
+      <div class="split-items">
+        <div class="split-item"><span class="ico"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="9" stroke="#D52B1E" stroke-width="1.5" fill="none"/><path d="M11 6v5.5l3.5 2" stroke="#D52B1E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span> 3–6 min per tool, 7–10×/week</div>
+        <div class="split-item"><span class="ico"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 8h6M4 14h6M12 8h6M12 14h6" stroke="#D52B1E" stroke-width="1.5" stroke-linecap="round"/><rect x="2" y="5" width="8" height="6" rx="1.5" stroke="#D52B1E" stroke-width="1.5" fill="none"/><rect x="12" y="11" width="8" height="6" rx="1.5" stroke="#D52B1E" stroke-width="1.5" fill="none"/></svg></span> 3 separate tools</div>
+        <div class="split-item"><span class="ico"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="3" width="12" height="16" rx="2" stroke="#D52B1E" stroke-width="1.5" fill="none"/><rect x="8" y="1" width="6" height="4" rx="1" stroke="#D52B1E" stroke-width="1.5" fill="none"/><line x1="8" y1="9" x2="14" y2="9" stroke="#D52B1E" stroke-width="1.3" stroke-linecap="round"/><line x1="8" y1="12.5" x2="14" y2="12.5" stroke="#D52B1E" stroke-width="1.3" stroke-linecap="round"/><line x1="8" y1="16" x2="11" y2="16" stroke="#D52B1E" stroke-width="1.3" stroke-linecap="round"/></svg></span> Copy-paste errors</div>
+        <div class="split-item"><span class="ico"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="9" stroke="#D52B1E" stroke-width="1.5" fill="none"/><line x1="7" y1="7" x2="15" y2="15" stroke="#D52B1E" stroke-width="1.5" stroke-linecap="round"/><line x1="15" y1="7" x2="7" y2="15" stroke="#D52B1E" stroke-width="1.5" stroke-linecap="round"/></svg></span> No leadership summary</div>
+        <div class="split-item"><span class="ico"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 11c0-3.866 3.134-7 7-7a7 7 0 016.5 4.5M18 11c0 3.866-3.134 7-7 7a7 7 0 01-6.5-4.5" stroke="#D52B1E" stroke-width="1.5" stroke-linecap="round"/><polyline points="17,6 19.5,9 17,12" stroke="#D52B1E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span> Manual follow-up</div>
+      </div>
+    </div>
+    <div class="half after" id="after-half">
+      <div class="split-label green">AFTER — OneHub</div>
+      <div class="split-items">
+        <div class="split-item"><span class="ico"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 2L5 12h7l-3 8 10-12h-7l3-6z" fill="#4CAF85" stroke="#4CAF85" stroke-width="0.5" stroke-linejoin="round"/></svg></span> 45 seconds</div>
+        <div class="split-item"><span class="ico"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 5l12 0M5 11h8M5 17h5" stroke="#4CAF85" stroke-width="1.5" stroke-linecap="round"/><path d="M15 13l4 4m0-4l-4 4" stroke="#4CAF85" stroke-width="1.5" stroke-linecap="round"/></svg></span> One sentence</div>
+        <div class="split-item"><span class="ico"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11 2l1.5 4.5h4.5l-3.7 2.7 1.4 4.3L11 11l-3.7 2.5 1.4-4.3L5 6.5h4.5L11 2z" stroke="#4CAF85" stroke-width="1.2" stroke-linejoin="round" fill="none"/><path d="M5 17l1.5-1.5M11 19v-2M17 17l-1.5-1.5" stroke="#4CAF85" stroke-width="1.3" stroke-linecap="round"/></svg></span> AI-parsed, consistent</div>
+        <div class="split-item"><span class="ico"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="13" width="4" height="7" rx="1" fill="#4CAF85"/><rect x="9" y="9" width="4" height="11" rx="1" fill="#4CAF85"/><rect x="16" y="5" width="4" height="15" rx="1" fill="#4CAF85"/></svg></span> Leadership summary</div>
+        <div class="split-item"><span class="ico"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="11" r="2.5" stroke="#4CAF85" stroke-width="1.4" fill="none"/><circle cx="17" cy="5" r="2.5" stroke="#4CAF85" stroke-width="1.4" fill="none"/><circle cx="17" cy="17" r="2.5" stroke="#4CAF85" stroke-width="1.4" fill="none"/><line x1="7.2" y1="9.8" x2="14.8" y2="6.2" stroke="#4CAF85" stroke-width="1.3" stroke-linecap="round"/><line x1="7.2" y1="12.2" x2="14.8" y2="15.8" stroke="#4CAF85" stroke-width="1.3" stroke-linecap="round"/></svg></span> Agent chains</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 7: CLOSING -->
+  <div class="scene" id="s7">
+    <div class="closing-logo" id="cl-logo">One<span>Hub</span></div>
+    <div class="closing-sub" id="cl-sub">AI-Powered Status Hub</div>
+    <div class="closing-event" id="cl-event">3X PM/XD Hackathon · Intuit × Anthropic</div>
+    <div class="closing-tagline" id="cl-tag">
+      Type once. <span>Update everywhere.</span> Chain to AI.
+    </div>
+  </div>
+
+</div>
+
+<!-- VOICEOVER AUDIO -->
+<audio id="vo" preload="auto" src="/onehub-voiceover.wav"></audio>
+
+<!-- CONTROLS -->
+<div id="controls">
+  <button class="ctrl-btn" id="pause-btn">⏸ Pause</button>
+  <button class="ctrl-btn" id="replay-btn">↺ Replay</button>
+  <button class="ctrl-btn" id="mute-btn" title="Toggle voiceover">🔊 Voice</button>
+</div>
+
+<!-- PROGRESS BAR -->
+<div id="progress-wrap"><div id="progress-fill"></div></div>
+
+<!-- LABELS -->
+<div id="scene-label">OneHub · AI Status Hub Demo</div>
+<div id="timer">0:00</div>
+
+<script>
+// ─── TIMING MAP ─────────────────────────────────────────
+// Total: 105 seconds
+const TOTAL_MS = 105000;
+
+const scenes = [
+  { id: 's1', start: 0,    end: 12000 },
+  { id: 's2', start: 12000, end: 30000 },
+  { id: 's3', start: 30000, end: 40000 },
+  { id: 's4', start: 40000, end: 52000 },
+  { id: 's5', start: 52000, end: 75000 },
+  { id: 's6', start: 75000, end: 90000 },
+  { id: 's7', start: 90000, end: 105000 },
+];
+
+// ─── AUDIO ───────────────────────────────────────────────
+const vo = document.getElementById('vo');
+const muteBtn = document.getElementById('mute-btn');
+let voEnabled = true;
+
+function voPlay() {
+  if (!voEnabled || !vo) return;
+  vo.currentTime = 0;
+  vo.play().catch(() => {}); // autoplay may require user gesture
+}
+function voPause() { if (vo) vo.pause(); }
+function voResume() { if (voEnabled && vo) vo.play().catch(() => {}); }
+function voStop() { if (vo) { vo.pause(); vo.currentTime = 0; } }
+
+muteBtn.addEventListener('click', () => {
+  voEnabled = !voEnabled;
+  muteBtn.textContent = voEnabled ? '🔊 Voice' : '🔇 Voice';
+  if (!voEnabled) voPause();
+  else if (!paused) voResume();
+});
+
+// ─── STATE ───────────────────────────────────────────────
+let startTime = null;
+let elapsed = 0;
+let paused = false;
+let pauseTime = null;
+let rafId = null;
+let sceneCallbacks = {};
+
+// Registered one-shot callbacks: { time_ms: [fn, ...] }
+const oneShots = {};
+const firedShots = new Set();
+
+function at(ms, fn) {
+  if (!oneShots[ms]) oneShots[ms] = [];
+  oneShots[ms].push(fn);
+}
+
+// ─── HELPERS ─────────────────────────────────────────────
+function show(el) { el && el.classList.add('show'); }
+function hide(el) { el && el.classList.remove('show'); }
+function qs(id) { return document.getElementById(id); }
+
+function typeText(el, text, duration, callback, cursorEl) {
+  const chars = text.split('');
+  const interval = duration / chars.length;
+  let i = 0;
+  const timer = setInterval(() => {
+    if (paused) return;
+    el.textContent += chars[i];
+    i++;
+    if (i >= chars.length) {
+      clearInterval(timer);
+      if (cursorEl) cursorEl.style.display = 'none';
+      if (callback) callback();
+    }
+  }, interval);
+  return timer;
+}
+
+// ─── SCENE INIT FUNCTIONS ────────────────────────────────
+
+function initS1() {
+  // Stagger problem lines
+  at(500,  () => show(qs('p0')));
+  at(1800, () => show(qs('p1')));
+  at(3800, () => show(qs('p2')));
+  at(5800, () => show(qs('p3')));
+  at(8500, () => show(qs('p4')));
+}
+
+function initS2() {
+  at(12300, () => show(qs('app-shell')));
+
+  // Animate project select
+  at(13800, () => {
+    const sel = qs('proj-select');
+    sel.style.transition = 'color 0.3s';
+    sel.style.color = '#172B4D';
+    sel.textContent = 'CGCX-1246 · CK/TT Overlap Dashboard';
+    sel.style.background = '#EAF2FF';
+    setTimeout(() => { sel.style.background = '#fff'; }, 600);
+  });
+
+  // Type the update text
+  const updateText = "CK/TT dashboard is 70% done. Blocked on API credentials from IT — timeline at risk. Plan to escalate today.";
+  at(15500, () => {
+    const typedEl = qs('typed-text');
+    const charNum = qs('char-num');
+    const chars = updateText.split('');
+    const interval = 14000 / chars.length; // ~14s to type (15.5s → 29.5s)
+    let i = 0;
+    const timer = setInterval(() => {
+      if (paused) return;
+      typedEl.textContent += chars[i];
+      charNum.textContent = typedEl.textContent.length;
+      i++;
+      if (i >= chars.length) clearInterval(timer);
+    }, interval);
+  });
+
+  // Pulse parse button
+  at(27000, () => {
+    const btn = qs('parse-btn');
+    btn.classList.add('pulse');
+  });
+
+  // Click parse button
+  at(29200, () => {
+    const btn = qs('parse-btn');
+    btn.classList.remove('pulse');
+    btn.classList.add('clicked');
+    qs('cursor').style.display = 'none';
+  });
+}
+
+function initS3() {
+  at(30300, () => show(qs('parsing-shell')));
+
+  at(31200, () => {
+    qs('parse-status-text').textContent = 'Extracting RAG status...';
+    setTimeout(() => show(qs('fr1')), 400);
+  });
+  at(32600, () => {
+    qs('parse-status-text').textContent = 'Calculating progress...';
+    show(qs('fr2'));
+  });
+  at(33800, () => {
+    qs('parse-status-text').textContent = 'Detecting priority signals...';
+    show(qs('fr3'));
+  });
+  at(35000, () => {
+    qs('parse-status-text').textContent = 'Identifying blockers...';
+    show(qs('fr4'));
+    const el = qs('tw1');
+    let txt = "API credentials from IT";
+    let i = 0;
+    const t = setInterval(() => {
+      if (paused) return;
+      el.textContent += txt[i]; i++;
+      if (i >= txt.length) { clearInterval(t); qs('mc1').style.display = 'none'; }
+    }, 55);
+  });
+  at(37200, () => {
+    qs('parse-status-text').textContent = 'Drafting next steps...';
+    show(qs('fr5'));
+    const el = qs('tw2');
+    let txt = "Escalate today";
+    let i = 0;
+    const t = setInterval(() => {
+      if (paused) return;
+      el.textContent += txt[i]; i++;
+      if (i >= txt.length) { clearInterval(t); qs('mc2').style.display = 'none'; }
+    }, 80);
+  });
+  at(39200, () => {
+    qs('parse-spinner').style.display = 'none';
+    qs('parse-status-text').textContent = '✓ Analysis complete';
+    qs('parse-status-text').style.color = '#4CAF85';
+  });
+}
+
+function initS4() {
+  at(40500, () => show(qs('writing-shell')));
+  at(41500, () => show(qs('cc1')));
+  at(42500, () => show(qs('cc2')));
+
+  // Jira done
+  at(46000, () => {
+    const card = qs('cc1');
+    card.classList.add('done');
+    qs('jira-status').innerHTML = '<span class="check-svg-wrap"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><circle class="check-circle" cx="11" cy="11" r="10" stroke="#00875A" stroke-width="1.8" fill="none"/><path class="check-tick" d="M6.5 11.5l3.5 3.5 6-7" stroke="#00875A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span><span class="done-text">Comment posted to CGCX-1246</span>';
+  });
+  // Smartsheet done
+  at(48500, () => {
+    const card = qs('cc2');
+    card.classList.add('done');
+    qs('ss-status').innerHTML = '<span class="check-svg-wrap"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><circle class="check-circle" cx="11" cy="11" r="10" stroke="#00875A" stroke-width="1.8" fill="none"/><path class="check-tick" d="M6.5 11.5l3.5 3.5 6-7" stroke="#00875A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span><span class="done-text">Row updated in tracker</span>';
+  });
+}
+
+function initS5() {
+  at(52500, () => show(qs('done-shell')));
+  at(54000, () => show(qs('sum-card')));
+
+  at(58000, () => {
+    show(qs('ac1'));
+    setTimeout(() => show(qs('ac2')), 300);
+    setTimeout(() => show(qs('ac3')), 600);
+  });
+}
+
+function initS6() {
+  at(75800, () => show(qs('before-half')));
+  at(77000, () => show(qs('after-half')));
+}
+
+function initS7() {
+  at(90800, () => {
+    show(qs('cl-logo'));
+    setTimeout(() => show(qs('cl-sub')), 300);
+    setTimeout(() => show(qs('cl-event')), 600);
+    setTimeout(() => show(qs('cl-tag')), 900);
+  });
+}
+
+// Register all scene inits
+initS1();
+initS2();
+initS3();
+initS4();
+initS5();
+initS6();
+initS7();
+
+// ─── MAIN LOOP ───────────────────────────────────────────
+function tick(ts) {
+  if (!startTime) startTime = ts;
+  if (!paused) {
+    elapsed = ts - startTime;
+  }
+
+  // Clamp
+  const t = Math.min(elapsed, TOTAL_MS);
+
+  // Progress bar
+  qs('progress-fill').style.width = (t / TOTAL_MS * 100) + '%';
+
+  // Timer
+  const secs = Math.floor(t / 1000);
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  qs('timer').textContent = m + ':' + String(s).padStart(2, '0');
+
+  // Scene visibility
+  let activeScene = null;
+  scenes.forEach(sc => {
+    const el = qs(sc.id);
+    if (t >= sc.start && t < sc.end) {
+      el.classList.add('active');
+      activeScene = sc.id;
+    } else {
+      el.classList.remove('active');
+    }
+  });
+
+  // Fire one-shot callbacks
+  Object.keys(oneShots).forEach(ms => {
+    const msNum = parseInt(ms);
+    if (t >= msNum && !firedShots.has(ms)) {
+      firedShots.add(ms);
+      oneShots[ms].forEach(fn => fn());
+    }
+  });
+
+  if (t < TOTAL_MS) {
+    rafId = requestAnimationFrame(tick);
+  } else {
+    qs('pause-btn').textContent = '↺ Done';
+  }
+}
+
+// ─── CONTROLS ────────────────────────────────────────────
+function startDemo() {
+  firedShots.clear();
+
+  // Reset all scene elements
+  document.querySelectorAll('.problem-line').forEach(el => el.classList.remove('show'));
+  document.querySelectorAll('.app-shell, .parsing-shell, .writing-shell, .done-shell').forEach(el => el.classList.remove('show'));
+  document.querySelectorAll('.field-row, .channel-card, .summary-card, .action-card').forEach(el => el.classList.remove('show'));
+  document.querySelectorAll('.half').forEach(el => el.classList.remove('show'));
+  document.querySelectorAll('.closing-logo, .closing-sub, .closing-event, .closing-tagline').forEach(el => el.classList.remove('show'));
+
+  // Reset typed text
+  qs('typed-text').textContent = '';
+  qs('char-num').textContent = '0';
+  qs('tw1').textContent = '';
+  qs('tw2').textContent = '';
+  qs('proj-select').textContent = 'Select a project...';
+  qs('proj-select').style.color = '#999';
+  qs('parse-btn').classList.remove('pulse', 'clicked');
+  qs('cursor').style.display = '';
+  qs('mc1').style.display = '';
+  qs('mc2').style.display = '';
+  qs('parse-spinner').style.display = '';
+  qs('parse-status-text').textContent = 'Analyzing update...';
+  qs('parse-status-text').style.color = '';
+  qs('jira-status').innerHTML = '<div class="writing-dots"><span></span><span></span><span></span></div><span>writing comment...</span>';
+  qs('ss-status').innerHTML = '<div class="writing-dots"><span></span><span></span><span></span></div><span>updating row...</span>';
+  qs('cc1').classList.remove('done');
+  qs('cc2').classList.remove('done');
+  qs('pause-btn').textContent = '⏸ Pause';
+  paused = false;
+
+  if (rafId) cancelAnimationFrame(rafId);
+  elapsed = 0;
+  startTime = null;
+  voStop();
+  voPlay();
+  rafId = requestAnimationFrame(tick);
+}
+
+qs('pause-btn').addEventListener('click', () => {
+  if (paused) {
+    // Resume
+    paused = false;
+    startTime = performance.now() - elapsed;
+    qs('pause-btn').textContent = '⏸ Pause';
+    voResume();
+    rafId = requestAnimationFrame(tick);
+  } else {
+    paused = true;
+    pauseTime = performance.now();
+    qs('pause-btn').textContent = '▶ Resume';
+    voPause();
+    if (rafId) cancelAnimationFrame(rafId);
+  }
+});
+
+qs('replay-btn').addEventListener('click', () => {
+  startDemo();
+});
+
+// ─── PAUSE SUPPORT FOR TYPEWRITER DURING PAUSE ──────────
+// The typewriter intervals check `paused` — they skip ticks while paused.
+
+// ─── KICK OFF ────────────────────────────────────────────
+startDemo();
+</script>
+</body>
+</html>

@@ -1,0 +1,2037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OneHub — AI-Powered Status Hub</title>
+<style>
+/* ================================================================
+   DESIGN SYSTEM — Intuit IDS tokens (reused from Sprint Command Center)
+   ================================================================ */
+:root {
+  --green:#00813A; --green-lt:#E6F4EC; --blue:#0077C5; --blue-lt:#E5F2FB;
+  --gold:#F4A428; --gold-lt:#FFF8E6; --red:#D0021B; --red-lt:#FDE8EB;
+  --purple:#6B46C1; --purple-lt:#F0EBFF;
+  --gray-1:#F5F6F7; --gray-2:#E8EAED; --gray-3:#9AA0A6; --gray-4:#5F6368;
+  --dark:#1A1A2E; --white:#FFFFFF; --radius:10px; --shadow:0 2px 12px rgba(0,0,0,.10);
+  --navy:#003366;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray-1);color:var(--dark);min-height:100vh}
+
+/* ── TOPBAR ─────────────────────────────────── */
+.topbar{background:var(--navy);color:#fff;padding:14px 28px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 6px rgba(0,0,0,.25);position:sticky;top:0;z-index:100}
+.topbar-logo{font-size:20px;font-weight:800;letter-spacing:-0.5px;display:flex;align-items:center;gap:8px;cursor:pointer}
+.topbar-logo .logo-dot{width:10px;height:10px;background:var(--green);border-radius:50%;display:inline-block}
+.topbar-badge{font-size:10px;background:rgba(255,255,255,.2);padding:3px 9px;border-radius:20px;margin-left:4px;letter-spacing:.5px;text-transform:uppercase;font-weight:600}
+.topbar-sub{font-size:12px;opacity:.6;margin-left:auto}
+.topbar-actions{display:flex;gap:6px;margin-left:12px;flex-wrap:nowrap}
+.topbar-btn{background:rgba(255,255,255,.15);border:none;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s;white-space:nowrap}
+.topbar-btn:hover{background:rgba(255,255,255,.28)}
+.topbar-btn.active{background:rgba(255,255,255,.3);border:1px solid rgba(255,255,255,.4)}
+/* Mobile nav — collapse to icon-only buttons, always show all 3 */
+@media(max-width:520px){
+  .topbar{padding:10px 14px;gap:8px}
+  .topbar-logo{font-size:16px}
+  .topbar-badge{display:none}
+  .topbar-sub{display:none}
+  .topbar-actions{margin-left:auto;gap:4px}
+  .topbar-btn{padding:6px 10px;font-size:11px}
+  .topbar-btn .btn-label{display:none}
+  .topbar-btn::before{font-size:15px}
+  #navUpdate::before{content:'✏️'}
+  #navDash::before{content:'📊'}
+  #navSettings::before{content:'⚙️'}
+}
+
+/* ── LAYOUT ─────────────────────────────────── */
+.container{max-width:900px;margin:0 auto;padding:28px 20px 60px}
+.card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:28px 32px;margin-bottom:20px}
+.card-title{font-size:19px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:10px}
+.card-sub{font-size:13px;color:var(--gray-4);margin-bottom:20px}
+
+/* ── SCREEN ROUTING ─────────────────────────── */
+.screen{display:none}
+.screen.active{display:block}
+
+/* ── INPUT AREA ─────────────────────────────── */
+.update-box{width:100%;min-height:120px;border:2px solid var(--gray-2);border-radius:8px;padding:16px;font-size:15px;font-family:inherit;resize:vertical;transition:border-color .2s;outline:none;line-height:1.6}
+.update-box:focus{border-color:var(--blue)}
+.update-box::placeholder{color:var(--gray-3)}
+.char-count{font-size:11px;color:var(--gray-3);text-align:right;margin-top:4px}
+.project-select{width:100%;padding:11px 14px;border:2px solid var(--gray-2);border-radius:8px;font-size:14px;font-family:inherit;margin-bottom:16px;outline:none;transition:border-color .2s;background:#fff;color:var(--dark)}
+.project-select:focus{border-color:var(--blue)}
+.project-select.error{border-color:var(--red);background:var(--red-lt)}
+.update-box.error{border-color:var(--red)}
+.field-error{font-size:12px;color:var(--red);margin-top:4px;margin-bottom:8px;display:none;font-weight:600}
+.field-error.show{display:block}
+.kb-hint{font-size:11px;color:var(--gray-3);margin-top:8px;display:flex;align-items:center;gap:6px}
+.kbd{background:var(--gray-2);padding:2px 6px;border-radius:4px;font-family:monospace;font-size:10px;color:var(--gray-4)}
+
+/* ── BUTTONS ─────────────────────────────────── */
+.btn{padding:11px 24px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all .18s;display:inline-flex;align-items:center;gap:8px}
+.btn-primary{background:var(--green);color:#fff}
+.btn-primary:hover{background:#005f2a}
+.btn-secondary{background:#fff;color:var(--blue);border:2px solid var(--blue)}
+.btn-secondary:hover{background:var(--blue-lt)}
+.btn-gray{background:var(--gray-2);color:var(--gray-4)}
+.btn-gray:hover{background:var(--gray-3);color:#fff}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{background:#a80116}
+.btn-purple{background:var(--purple);color:#fff}
+.btn-purple:hover{background:#5a3aa8}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-sm{padding:7px 16px;font-size:12px}
+.action-row{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;align-items:center}
+
+/* ── PARSING STATE ───────────────────────────── */
+.parse-loading{display:flex;align-items:center;gap:12px;padding:24px;color:var(--blue);font-weight:600;font-size:15px}
+.spinner{width:22px;height:22px;border:3px solid var(--blue-lt);border-top:3px solid var(--blue);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.parse-steps{margin-top:16px;padding:0 24px 20px}
+.parse-step{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;color:var(--gray-3);transition:color .3s}
+.parse-step.done{color:var(--green)}
+.parse-step.active{color:var(--blue);font-weight:600}
+.parse-step-icon{width:18px;text-align:center;font-size:14px}
+
+/* ── PARSED PREVIEW CARD ─────────────────────── */
+.parse-field{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-2)}
+.parse-field:last-child{border-bottom:none}
+.pf-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--gray-3);width:130px;flex-shrink:0;margin-top:2px}
+.pf-value{font-size:14px;color:var(--dark);flex:1;line-height:1.5}
+.pf-edit{font-size:11px;color:var(--blue);cursor:pointer;margin-left:8px;text-decoration:underline;white-space:nowrap}
+
+/* ── STATUS BADGES ───────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.3px}
+.badge-green{background:var(--green-lt);color:var(--green)}
+.badge-gold{background:var(--gold-lt);color:#9a6300}
+.badge-red{background:var(--red-lt);color:var(--red)}
+.badge-blue{background:var(--blue-lt);color:var(--blue)}
+.badge-gray{background:var(--gray-2);color:var(--gray-4)}
+.badge-purple{background:var(--purple-lt);color:var(--purple)}
+
+/* ── CONFIDENCE METER ────────────────────────── */
+.conf-bar{height:6px;background:var(--gray-2);border-radius:3px;overflow:hidden;margin-top:6px;width:200px}
+.conf-fill{height:100%;border-radius:3px;transition:width .6s}
+.conf-high{background:var(--green)}
+.conf-med{background:var(--gold)}
+.conf-low{background:var(--red)}
+.conf-label{font-size:11px;color:var(--gray-4);margin-top:3px}
+.conf-explainer{margin-top:10px;background:var(--gray-1);border-radius:8px;padding:12px 14px;display:none}
+.conf-explainer.open{display:block}
+.conf-factor{display:flex;align-items:center;gap:8px;font-size:12px;padding:3px 0;color:var(--gray-4)}
+.conf-factor.hit{color:var(--green)}
+
+/* ── WRITE STATE MACHINE ─────────────────────── */
+.write-targets{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin:16px 0}
+.write-target{border:2px solid var(--gray-2);border-radius:10px;padding:16px 18px;transition:all .3s}
+.write-target.pending{border-color:var(--gold);background:var(--gold-lt)}
+.write-target.writing{border-color:var(--blue);background:var(--blue-lt)}
+.write-target.done{border-color:var(--green);background:var(--green-lt)}
+.write-target.failed{border-color:var(--red);background:var(--red-lt)}
+.write-target.skipped{border-color:var(--gray-2);background:var(--gray-1);opacity:.5}
+.wt-icon{font-size:22px;margin-bottom:6px}
+.wt-name{font-size:13px;font-weight:700}
+.wt-status{font-size:11px;color:var(--gray-4);margin-top:3px}
+.wt-status.green{color:var(--green)}
+.wt-status.red{color:var(--red)}
+.wt-status.blue{color:var(--blue)}
+
+/* ── SUMMARY CARD ────────────────────────────── */
+.summary-card{background:linear-gradient(135deg,var(--navy) 0%,#1a3a5c 100%);color:#fff;border-radius:12px;padding:28px 32px;margin-top:20px}
+.sc-title{font-size:13px;text-transform:uppercase;letter-spacing:1px;opacity:.6;margin-bottom:6px;font-weight:600}
+.sc-project{font-size:22px;font-weight:800;margin-bottom:20px}
+.sc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px}
+@media(max-width:550px){.sc-grid{grid-template-columns:1fr 1fr}}
+.sc-stat{background:rgba(255,255,255,.1);border-radius:8px;padding:14px 16px}
+.sc-stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;opacity:.6;margin-bottom:4px}
+.sc-stat-val{font-size:22px;font-weight:800}
+.sc-stat-sub{font-size:11px;opacity:.7;margin-top:2px}
+.sc-section{margin-bottom:16px}
+.sc-section-label{font-size:11px;text-transform:uppercase;letter-spacing:.8px;opacity:.6;margin-bottom:8px;font-weight:600}
+.sc-section-body{font-size:14px;line-height:1.6;opacity:.9}
+.sc-rag{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:4px 12px;border-radius:20px}
+.rag-green{background:var(--green);color:#fff}
+.rag-gold{background:var(--gold);color:#fff}
+.rag-red{background:var(--red);color:#fff}
+.sc-copy-row{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+.sc-btn{background:rgba(255,255,255,.2);border:none;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s}
+.sc-btn:hover{background:rgba(255,255,255,.32)}
+
+/* ── WHAT'S NEXT CARD ───────────────────────── */
+.whats-next-card{background:#fff;border:1px solid var(--gray-1);border-radius:12px;padding:24px;margin-top:16px}
+.wn-title{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.wn-sub{font-size:13px;color:var(--gray-3);margin-bottom:18px}
+.wn-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:780px){.wn-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.wn-grid{grid-template-columns:1fr}}
+.wn-action{border:1.5px solid var(--gray-1);border-radius:10px;padding:18px 16px;cursor:pointer;transition:border-color .2s,box-shadow .2s,transform .15s;position:relative;display:flex;flex-direction:column}
+.wn-action:hover{border-color:var(--blue);box-shadow:0 4px 16px rgba(0,82,204,.12);transform:translateY(-2px)}
+.wn-icon{font-size:24px;margin-bottom:8px}
+.wn-action-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:5px}
+.wn-action-desc{font-size:11px;color:var(--gray-3);line-height:1.5;flex:1}
+.wn-skill{font-size:10px;font-family:monospace;color:var(--blue);margin-top:8px;opacity:.7}
+.wn-badge{display:inline-block;margin-top:8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;padding:3px 8px;border-radius:20px;background:var(--red-lt);color:var(--red)}
+.wn-badge.amber{background:#FFF3CD;color:#B8860B}
+.wn-badge.green{background:var(--green-lt);color:var(--green)}
+.wn-action.wn-dim{opacity:.35}
+.wn-action.wn-dim:hover{opacity:.65}
+.wn-toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;font-size:13px;font-weight:600;padding:10px 20px;border-radius:24px;box-shadow:0 4px 20px rgba(0,0,0,.25);z-index:9999;animation:wnFadeIn .25s ease}
+@keyframes wnFadeIn{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* ── LIVE READINESS ─────────────────────────── */
+.live-dot{width:10px;height:10px;border-radius:50%;background:var(--gray-2);flex-shrink:0;margin-left:auto;transition:background .3s}
+.live-dot.live{background:var(--green)}
+.live-dot.partial{background:var(--gold)}
+.live-dot.error{background:var(--red)}
+.readiness-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:12px;font-weight:600;border:1px solid transparent}
+.readiness-bar.live{background:var(--green-lt);border-color:var(--green);color:var(--green)}
+.readiness-bar.partial{background:#FFF3CD;border-color:#F0C040;color:#856404}
+.readiness-bar.demo{background:var(--gray-1);border-color:var(--gray-2);color:var(--gray-4)}
+.readiness-bar .rb-icon{font-size:16px}
+.readiness-bar .rb-text{flex:1}
+.readiness-bar .rb-link{text-decoration:underline;cursor:pointer;opacity:.8}
+.readiness-bar .rb-link:hover{opacity:1}
+
+/* ── TIME SAVED BANNER ───────────────────────── */
+.time-saved{background:linear-gradient(90deg,var(--green-lt),#d4f0e0);border:1px solid var(--green);border-radius:10px;padding:16px 20px;display:flex;align-items:center;gap:16px;margin-bottom:16px}
+.ts-number{font-size:32px;font-weight:800;color:var(--green)}
+.ts-label{font-size:13px;color:var(--dark)}
+.ts-sub{font-size:11px;color:var(--gray-4);margin-top:2px}
+
+/* ── BANNERS ─────────────────────────────────── */
+.banner{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px}
+.banner-info{background:var(--blue-lt);color:var(--blue);border-left:4px solid var(--blue)}
+.banner-success{background:var(--green-lt);color:var(--green);border-left:4px solid var(--green)}
+.banner-warn{background:var(--gold-lt);color:#9a6300;border-left:4px solid var(--gold)}
+.banner-error{background:var(--red-lt);color:var(--red);border-left:4px solid var(--red)}
+
+/* ── STEP INDICATOR ──────────────────────────── */
+.steps{display:flex;gap:0;margin-bottom:28px;align-items:center}
+.step{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--gray-3)}
+.step.active{color:var(--blue)}
+.step.done{color:var(--green)}
+.step-num{width:26px;height:26px;border-radius:50%;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.step.done .step-num{background:var(--green);border-color:var(--green);color:#fff}
+.step-line{flex:1;height:2px;background:var(--gray-2);margin:0 8px}
+.step-line.done{background:var(--green)}
+
+/* ── EXAMPLES ────────────────────────────────── */
+.examples{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.example-chip{font-size:12px;padding:6px 12px;border:1px dashed var(--blue);border-radius:20px;color:var(--blue);cursor:pointer;transition:all .2s}
+.example-chip:hover{background:var(--blue-lt)}
+
+/* ── DASHBOARD ───────────────────────────────── */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.dash-card{background:#fff;border-radius:10px;box-shadow:var(--shadow);padding:18px 20px;border-left:4px solid var(--gray-2);transition:transform .2s}
+.dash-card:hover{transform:translateY(-2px)}
+.dash-card.rag-g{border-left-color:var(--green)}
+.dash-card.rag-y{border-left-color:var(--gold)}
+.dash-card.rag-r{border-left-color:var(--red)}
+.dash-card.rag-none{border-left-color:var(--gray-3)}
+.dc-project{font-size:13px;font-weight:700;margin-bottom:4px}
+.dc-summary{font-size:12px;color:var(--gray-4);line-height:1.5;margin-bottom:8px}
+.dc-meta{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--gray-3)}
+.dc-update-btn{margin-left:auto;font-size:11px;padding:4px 10px;background:var(--blue-lt);color:var(--blue);border:none;border-radius:5px;cursor:pointer;font-weight:600}
+.dc-update-btn:hover{background:var(--blue);color:#fff}
+.dash-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.dash-stat{background:#fff;border-radius:8px;padding:14px 16px;box-shadow:var(--shadow);text-align:center}
+.ds-num{font-size:28px;font-weight:800}
+.ds-label{font-size:11px;color:var(--gray-4);margin-top:2px}
+.ds-green{color:var(--green)}
+.ds-gold{color:var(--gold)}
+.ds-red{color:var(--red)}
+.ds-gray{color:var(--gray-3)}
+
+/* ── SETTINGS ────────────────────────────────── */
+.settings-section{margin-bottom:28px}
+.settings-label{font-size:13px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.settings-input{width:100%;padding:10px 14px;border:2px solid var(--gray-2);border-radius:8px;font-size:13px;font-family:inherit;outline:none;transition:border-color .2s;margin-bottom:8px}
+.settings-input:focus{border-color:var(--blue)}
+.channel-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-2)}
+.channel-row:last-child{border-bottom:none}
+.channel-icon{font-size:20px;width:32px;text-align:center;display:flex;align-items:center;justify-content:center}
+.channel-icon svg,.channel-icon img{width:24px;height:24px;object-fit:contain;border-radius:4px}
+.wn-icon svg,.wn-icon img{width:28px;height:28px;object-fit:contain}
+.channel-info{flex:1}
+.channel-name{font-size:13px;font-weight:700}
+.channel-desc{font-size:11px;color:var(--gray-4);margin-top:2px}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--gray-2);border-radius:22px;cursor:pointer;transition:.3s}
+.toggle-slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.3s}
+.toggle input:checked+.toggle-slider{background:var(--green)}
+.toggle input:checked+.toggle-slider:before{transform:translateX(18px)}
+.col-map-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;align-items:center}
+.col-map-label{font-size:12px;color:var(--gray-4);font-weight:600}
+.col-map-select{padding:8px 10px;border:2px solid var(--gray-2);border-radius:6px;font-size:12px;font-family:inherit;outline:none;background:#fff}
+.col-map-select:focus{border-color:var(--blue)}
+.test-btn{font-size:11px;padding:5px 12px;border:none;border-radius:5px;cursor:pointer;font-weight:600;background:var(--blue-lt);color:var(--blue)}
+.test-btn:hover{background:var(--blue);color:#fff}
+.test-result{font-size:11px;margin-top:6px;padding:6px 10px;border-radius:5px}
+.test-ok{background:var(--green-lt);color:var(--green)}
+.test-fail{background:var(--red-lt);color:var(--red)}
+
+/* ── EDITABLE FIELD ──────────────────────────── */
+.editable-input{width:100%;padding:8px 12px;border:2px solid var(--blue);border-radius:6px;font-size:14px;font-family:inherit;outline:none;line-height:1.5}
+
+/* ── HISTORY ─────────────────────────────────── */
+.hist-row{padding:14px 0;border-bottom:1px solid var(--gray-2);display:flex;align-items:flex-start;gap:14px}
+.hist-row:last-child{border-bottom:none}
+.hist-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.hist-meta{font-size:11px;color:var(--gray-3);margin-top:3px}
+
+/* ── TOAST ───────────────────────────────────── */
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--dark);color:#fff;padding:12px 22px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .3s;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+#toast.show{opacity:1}
+
+/* ── ERROR STATE ─────────────────────────────── */
+.error-state{text-align:center;padding:32px 20px}
+.error-icon{font-size:40px;margin-bottom:12px}
+.error-title{font-size:16px;font-weight:700;margin-bottom:8px}
+.error-msg{font-size:13px;color:var(--gray-4);margin-bottom:20px;line-height:1.6}
+</style>
+</head>
+<body>
+<!-- BRAND LOGO SVGs -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="logo-jira" viewBox="0 0 32 32">
+    <rect width="32" height="32" rx="6" fill="#0052cc"/>
+    <path fill="white" d="M16 7l-7 7 3 3 4-4 4 4 3-3zm0 8l-4 4 1.5 1.5L16 18l2.5 2.5L20 19z"/>
+    <circle cx="16" cy="22" r="2" fill="white"/>
+  </symbol>
+  <symbol id="logo-smartsheet" viewBox="0 0 32 32">
+    <rect width="32" height="32" rx="6" fill="#0073e6"/>
+    <rect x="6" y="8" width="20" height="3" rx="1.5" fill="white"/>
+    <rect x="6" y="14.5" width="20" height="3" rx="1.5" fill="white"/>
+    <rect x="6" y="21" width="12" height="3" rx="1.5" fill="white"/>
+  </symbol>
+  <symbol id="logo-slack" viewBox="0 0 32 32">
+    <rect width="32" height="32" rx="6" fill="#4a154b"/>
+    <g fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+      <line x1="10" y1="16" x2="22" y2="16"/>
+      <line x1="10" y1="11" x2="22" y2="11"/>
+      <line x1="10" y1="21" x2="16" y2="21"/>
+    </g>
+    <circle cx="22" cy="21" r="3" fill="#ecb22e"/>
+  </symbol>
+  <symbol id="logo-creditkarma" viewBox="0 0 32 32">
+    <rect width="32" height="32" rx="6" fill="#008272"/>
+    <path d="M10 16a6 6 0 016-6 6 6 0 016 6 6 6 0 01-6 6 6 6 0 01-6-6zm6-3.5l-3.5 3.5 3.5 3.5 3.5-3.5z" fill="white"/>
+  </symbol>
+  <symbol id="logo-turbotax" viewBox="0 0 32 32">
+    <rect width="32" height="32" rx="6" fill="#0077c5"/>
+    <text x="5" y="23" font-family="Arial Black,sans-serif" font-size="14" font-weight="900" fill="white">TT</text>
+  </symbol>
+  <symbol id="logo-gsheets" viewBox="0 0 32 32">
+    <rect width="32" height="32" rx="6" fill="#34a853"/>
+    <rect x="8" y="9" width="16" height="2.5" rx="1" fill="white" opacity=".9"/>
+    <rect x="8" y="14" width="16" height="2.5" rx="1" fill="white" opacity=".9"/>
+    <rect x="8" y="19" width="10" height="2.5" rx="1" fill="white" opacity=".9"/>
+  </symbol>
+  <symbol id="logo-gslides" viewBox="0 0 32 32">
+    <rect width="32" height="32" rx="6" fill="#fbbc04"/>
+    <rect x="7" y="9" width="18" height="14" rx="2" fill="white" opacity=".9"/>
+    <polygon points="13,13 13,19 20,16" fill="#fbbc04"/>
+  </symbol>
+  <symbol id="logo-email" viewBox="0 0 32 32">
+    <rect width="32" height="32" rx="6" fill="#ea4335"/>
+    <path d="M7 10h18a1 1 0 011 1v10a1 1 0 01-1 1H7a1 1 0 01-1-1V11a1 1 0 011-1zm9 7l9-6H7z" fill="white"/>
+  </symbol>
+</svg>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-logo" onclick="showScreen('screenInput')">
+    <span class="logo-dot"></span>
+    OneHub
+    <span class="topbar-badge">AI Beta</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin-left:12px;opacity:0.7">
+    <svg width="18" height="18" title="Jira"><use href="#logo-jira"/></svg>
+    <svg width="18" height="18" title="Smartsheet"><use href="#logo-smartsheet"/></svg>
+    <svg width="18" height="18" title="Slack"><use href="#logo-slack"/></svg>
+  </div>
+  <div class="topbar-actions">
+    <button class="topbar-btn" onclick="safeNavigate('screenInput')" id="navUpdate"><span class="btn-label">✏️ Update</span></button>
+    <button class="topbar-btn" onclick="safeNavigate('dashboard')" id="navDash"><span class="btn-label">📊 Dashboard</span></button>
+    <button class="topbar-btn" onclick="safeNavigate('settings')" id="navSettings"><span class="btn-label">⚙️ Settings</span></button>
+  </div>
+  <div class="topbar-sub" style="display:flex;align-items:center;gap:10px;margin-left:auto;opacity:1">
+    <span style="font-size:10px;opacity:.5;letter-spacing:.4px;text-transform:uppercase;font-weight:600">Built for</span>
+    <!-- Intuit wordmark -->
+    <svg width="44" height="18" viewBox="0 0 80 26" fill="none" xmlns="http://www.w3.org/2000/svg" title="Intuit">
+      <text x="0" y="21" font-family="Arial Black,Helvetica Neue,sans-serif" font-size="21" font-weight="900" fill="white" opacity=".85">intuit</text>
+    </svg>
+    <span style="opacity:.3;font-size:14px">·</span>
+    <!-- Credit Karma pill -->
+    <div style="display:flex;align-items:center;gap:5px;background:rgba(0,130,114,.35);border-radius:20px;padding:3px 9px 3px 5px">
+      <svg width="16" height="16" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="32" height="32" rx="8" fill="#008272"/>
+        <path d="M16 8a8 8 0 100 16A8 8 0 0016 8zm-1.5 4.5l5 3.5-5 3.5V12.5z" fill="white"/>
+      </svg>
+      <span style="font-size:11px;font-weight:700;color:white;opacity:.9">Credit Karma</span>
+    </div>
+    <span style="opacity:.3;font-size:14px">·</span>
+    <!-- TurboTax pill -->
+    <div style="display:flex;align-items:center;gap:5px;background:rgba(0,119,197,.35);border-radius:20px;padding:3px 9px 3px 5px">
+      <svg width="16" height="16" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="32" height="32" rx="8" fill="#0077c5"/>
+        <text x="5" y="23" font-family="Arial Black,sans-serif" font-size="13" font-weight="900" fill="white">TT</text>
+      </svg>
+      <span style="font-size:11px;font-weight:700;color:white;opacity:.9">TurboTax</span>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ================================================================
+     SCREEN: INPUT
+     ================================================================ -->
+<div id="screenInput" class="screen active">
+  <div class="container">
+    <div class="steps">
+      <div class="step active"><div class="step-num">1</div><span>Write Update</span></div>
+      <div class="step-line"></div>
+      <div class="step"><div class="step-num">2</div><span>Review & Confirm</span></div>
+      <div class="step-line"></div>
+      <div class="step"><div class="step-num">3</div><span>Published</span></div>
+    </div>
+
+    <!-- Live Readiness Bar -->
+    <div class="readiness-bar demo" id="readinessBar">
+      <span class="rb-icon">⚙️</span>
+      <span class="rb-text" id="readinessText">Demo mode — Jira & Smartsheet writes are simulated. <span class="rb-link" onclick="safeNavigate('screenSettings')">Add credentials in Settings →</span></span>
+    </div>
+
+    <div class="card">
+      <div class="card-title">✏️ What's your project update?</div>
+      <div class="card-sub">Write it like you'd tell a teammate. OneHub's AI figures out the rest.</div>
+
+      <select class="project-select" id="projectSelect" onchange="clearFieldError('projectSelect','projectError')">
+        <option value="">— Select a project —</option>
+        <option value="CGCX-1246">CGCX-1246 · CK/TT Overlap Dashboard</option>
+        <option value="CGCX-1190">CGCX-1190 · FY26 Migration Prep</option>
+        <option value="CGCX-1210">CGCX-1210 · CRM Integration</option>
+        <option value="CGCX-1098">CGCX-1098 · DS Community Track</option>
+        <option value="CGCX-9999">CGCX-9999 · CG Efficiencies Core Team</option>
+      </select>
+      <div class="field-error" id="projectError">⚠ Please select a project before parsing.</div>
+
+      <div class="examples">
+        <div class="example-chip" onclick="setExample(0)">💡 On track, shipped new filter</div>
+        <div class="example-chip" onclick="setExample(1)">⚠️ Blocked on API access</div>
+        <div class="example-chip" onclick="setExample(2)">✅ Wrapped up, all done!</div>
+        <div class="example-chip" onclick="setExample(3)">🔴 Red flag — timeline at risk</div>
+      </div>
+
+      <textarea id="updateInput" class="update-box"
+        placeholder="e.g. The dashboard is about 70% done. We finished the data layer last week and the UI is in progress. Still waiting on the API token from the platform team — that's the main blocker right now. Planning to have a demo ready by Friday."
+        oninput="updateCharCount();clearFieldError('updateInput','textError')"></textarea>
+      <div class="field-error" id="textError">⚠ Please write your update before parsing.</div>
+      <div class="char-count"><span id="charCount">0</span> characters</div>
+      <div class="kb-hint">💡 Tip: Press <span class="kbd">⌘ Enter</span> or <span class="kbd">Ctrl Enter</span> to parse</div>
+
+      <div class="action-row">
+        <button class="btn btn-primary" onclick="parseUpdate()" id="parseBtn">✨ Parse with AI</button>
+        <span style="font-size:12px;color:var(--gray-3)" id="aiModeLabel">Powered by Claude · ~2 seconds</span>
+      </div>
+
+      <!-- Brand ecosystem strip -->
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--gray-1);display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--gray-3);font-weight:600;letter-spacing:.4px;text-transform:uppercase">Updates across</span>
+        <!-- Intuit -->
+        <div style="display:flex;align-items:center;gap:5px">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect width="13" height="13" rx="3" fill="#365ebf"/><text x="1.5" y="10" font-family="Arial Black,sans-serif" font-size="8" font-weight="900" fill="white">in</text></svg>
+          <span style="font-size:12px;font-weight:800;color:#365ebf;letter-spacing:-.3px">intuit</span>
+        </div>
+        <span style="color:var(--gray-2);font-size:12px">·</span>
+        <!-- Credit Karma -->
+        <div style="display:flex;align-items:center;gap:5px">
+          <svg width="13" height="13" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#008272"/><path d="M16 8a8 8 0 100 16A8 8 0 0016 8zm-1.5 4.5l5 3.5-5 3.5V12.5z" fill="white"/></svg>
+          <span style="font-size:12px;font-weight:700;color:#008272">Credit Karma</span>
+        </div>
+        <span style="color:var(--gray-2);font-size:12px">·</span>
+        <!-- TurboTax -->
+        <div style="display:flex;align-items:center;gap:5px">
+          <svg width="13" height="13" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#0077c5"/><text x="4" y="23" font-family="Arial Black,sans-serif" font-size="14" font-weight="900" fill="white">T</text></svg>
+          <span style="font-size:12px;font-weight:700;color:#0077c5">TurboTax</span>
+        </div>
+        <span style="color:var(--gray-2);font-size:12px">·</span>
+        <!-- Jira -->
+        <div style="display:flex;align-items:center;gap:5px">
+          <svg width="13" height="13" viewBox="0 0 32 32"><use href="#logo-jira"/></svg>
+          <span style="font-size:12px;font-weight:700;color:#0052cc">Jira</span>
+        </div>
+        <span style="color:var(--gray-2);font-size:12px">·</span>
+        <!-- Smartsheet -->
+        <div style="display:flex;align-items:center;gap:5px">
+          <svg width="13" height="13" viewBox="0 0 32 32"><use href="#logo-smartsheet"/></svg>
+          <span style="font-size:12px;font-weight:700;color:#0073e6">Smartsheet</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="historyCard">
+      <div class="card-title">🕘 Recent Updates</div>
+      <div id="historyList">
+        <div class="hist-row">
+          <div class="hist-dot" style="background:var(--gold)"></div>
+          <div><strong>CK/TT Overlap Dashboard</strong>
+          <div class="hist-meta">2 days ago · <span class="badge badge-gold">AMBER</span></div>
+          <div style="font-size:13px;color:var(--gray-4);margin-top:4px">70% done. Blocker on API token from platform team.</div></div>
+        </div>
+        <div class="hist-row">
+          <div class="hist-dot" style="background:var(--green)"></div>
+          <div><strong>DS Community Track</strong>
+          <div class="hist-meta">5 days ago · <span class="badge badge-green">GREEN</span></div>
+          <div style="font-size:13px;color:var(--gray-4);margin-top:4px">Monthly sessions launched. Q2 schedule published.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     SCREEN: PARSING
+     ================================================================ -->
+<div id="screenParsing" class="screen">
+  <div class="container">
+    <div class="card">
+      <div class="parse-loading">
+        <div class="spinner"></div>
+        <div>
+          <div>Claude is reading your update…</div>
+          <div style="font-size:12px;color:var(--gray-3);font-weight:400;margin-top:3px" id="parseStatusMsg">Starting analysis</div>
+        </div>
+      </div>
+      <div class="parse-steps" id="parseSteps">
+        <div class="parse-step" id="ps1"><span class="parse-step-icon">○</span> Extracting RAG status</div>
+        <div class="parse-step" id="ps2"><span class="parse-step-icon">○</span> Identifying blockers</div>
+        <div class="parse-step" id="ps3"><span class="parse-step-icon">○</span> Detecting progress signal</div>
+        <div class="parse-step" id="ps4"><span class="parse-step-icon">○</span> Inferring next steps</div>
+        <div class="parse-step" id="ps5"><span class="parse-step-icon">○</span> Scoring confidence</div>
+        <div class="parse-step" id="ps6"><span class="parse-step-icon">○</span> Generating leadership summary</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     SCREEN: CONFIRM
+     ================================================================ -->
+<div id="screenConfirm" class="screen">
+  <div class="container">
+    <div class="steps">
+      <div class="step done"><div class="step-num">✓</div><span>Write Update</span></div>
+      <div class="step-line done"></div>
+      <div class="step active"><div class="step-num">2</div><span>Review & Confirm</span></div>
+      <div class="step-line"></div>
+      <div class="step"><div class="step-num">3</div><span>Published</span></div>
+    </div>
+
+    <div class="banner banner-info">🤖 AI parsed your update. Review below — edit anything before publishing.</div>
+
+    <div class="card">
+      <div class="card-title">🔍 What Claude Extracted</div>
+      <div class="card-sub" id="confirmProjectLabel">—</div>
+      <div id="parsedFields"></div>
+      <div class="action-row">
+        <button class="btn btn-primary" onclick="confirmAndWrite()" id="confirmBtn">🚀 Publish to All Channels</button>
+        <button class="btn btn-gray" onclick="goToInput()">← Edit Update</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📡 Active Channels</div>
+      <div class="card-sub">Update will be written to all enabled channels below.</div>
+      <div id="channelPreviewList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     SCREEN: WRITING
+     ================================================================ -->
+<div id="screenWriting" class="screen">
+  <div class="container">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:20px">🚀 Publishing your update…</div>
+      <div class="write-targets" id="writeTargetsLive"></div>
+      <div id="writeLog" style="font-size:12px;color:var(--gray-3);margin-top:16px;line-height:2"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     SCREEN: DONE
+     ================================================================ -->
+<div id="screenDone" class="screen">
+  <div class="container">
+    <div class="steps">
+      <div class="step done"><div class="step-num">✓</div><span>Write Update</span></div>
+      <div class="step-line done"></div>
+      <div class="step done"><div class="step-num">✓</div><span>Review & Confirm</span></div>
+      <div class="step-line done"></div>
+      <div class="step done"><div class="step-num">✓</div><span>Published</span></div>
+    </div>
+
+    <div class="banner banner-success">✓ Update published successfully to all channels.</div>
+
+    <!-- Time saved -->
+    <div class="time-saved">
+      <div class="ts-number" id="timeSavedNum">~9 min</div>
+      <div>
+        <div class="ts-label">saved this update vs. doing it manually</div>
+        <div class="ts-sub">Manual avg: 3–6 min/system × <span id="channelCount">2</span> systems. OneHub: 45 sec. &nbsp;·&nbsp; <strong id="weeklySaved">~36 min/week</strong> across 7–10 updates.</div>
+      </div>
+    </div>
+
+    <!-- Write receipts -->
+    <div class="write-targets" id="writeReceipts"></div>
+
+    <!-- Leadership Summary Card -->
+    <div class="summary-card" id="summaryCard">
+      <div class="sc-title">Leadership Summary</div>
+      <div class="sc-project" id="scProject">—</div>
+      <div class="sc-grid" id="scGrid"></div>
+      <div class="sc-section"><div class="sc-section-label">Status</div><div class="sc-section-body" id="scStatusBody">—</div></div>
+      <div class="sc-section" id="scBlockerSection"><div class="sc-section-label">Key Blocker</div><div class="sc-section-body" id="scBlockerBody">—</div></div>
+      <div class="sc-section" id="scNextSection"><div class="sc-section-label">Next Steps</div><div class="sc-section-body" id="scNextBody">—</div></div>
+      <div class="sc-copy-row">
+        <button class="sc-btn" onclick="copyCard()">📋 Copy for Slack</button>
+        <button class="sc-btn" onclick="goToInput()">+ New Update</button>
+        <button class="sc-btn" onclick="showDashboard()">📊 View Dashboard</button>
+      </div>
+    </div>
+
+    <!-- What's Next? Action Cards -->
+    <div class="whats-next-card" id="whatsNextCard">
+      <div class="wn-title">⚡ What's Next?</div>
+      <div class="wn-sub">Chain to live CGPM catalog agents — click any card to copy the trigger phrase.</div>
+      <div class="wn-grid">
+
+        <!-- Card 1: Escalate — RED only -->
+        <div class="wn-action" id="wnEscalate" onclick="wnCopy('escalate')">
+          <div class="wn-icon">🚨</div>
+          <div class="wn-action-title">Escalate to leadership</div>
+          <div class="wn-action-desc">Draft a formal escalation memo — escalating a risk or blocker, requesting a decision from leadership</div>
+          <div class="wn-skill">create-exec-communication</div>
+          <div class="wn-badge" id="wnEscalateBadge">For RED status</div>
+        </div>
+
+        <!-- Card 2: Stakeholder Update — AMBER -->
+        <div class="wn-action" id="wnStakeholder" onclick="wnCopy('stakeholder')">
+          <div class="wn-icon">📢</div>
+          <div class="wn-action-title">Stakeholder update</div>
+          <div class="wn-action-desc">Write a weekly or bi-weekly status update for leadership — includes goals, metrics, and roadmap context</div>
+          <div class="wn-skill">create-stakeholder-update</div>
+          <div class="wn-badge amber" id="wnStakeholderBadge">For AMBER status</div>
+        </div>
+
+        <!-- Card 3: Make Slides — always -->
+        <div class="wn-action" onclick="wnCopy('slides')">
+          <div class="wn-icon">🖥️</div>
+          <div class="wn-action-title">Make slides</div>
+          <div class="wn-action-desc">Build a leadership or QBR deck — strategy docs, team updates, any branded slide deck</div>
+          <div class="wn-skill">create-presentation</div>
+        </div>
+
+        <!-- Card 4: Dig into Slack — always -->
+        <div class="wn-action" onclick="wnCopy('slack')">
+          <div class="wn-icon">🔍</div>
+          <div class="wn-action-title">Dig into Slack</div>
+          <div class="wn-action-desc">Summarize channel content, identify action items, analyze themes — what's the team actually saying?</div>
+          <div class="wn-skill">summarize-slack-channel</div>
+        </div>
+
+        <!-- Card 5: Check Metrics — always -->
+        <div class="wn-action" onclick="wnCopy('metrics')">
+          <div class="wn-icon">📊</div>
+          <div class="wn-action-title">Check the metrics</div>
+          <div class="wn-action-desc">Pull live Amplitude data, compare to targets — validate whether the RAG status matches actual product signals</div>
+          <div class="wn-skill">metrics-check</div>
+        </div>
+
+        <!-- Card 6: Retrospective — COMPLETED only -->
+        <div class="wn-action" id="wnRetro" onclick="wnCopy('retro')">
+          <div class="wn-icon">🔁</div>
+          <div class="wn-action-title">Run a retrospective</div>
+          <div class="wn-action-desc">After a milestone ships or incident closes — capture learnings, log institutional knowledge, feed next PRD</div>
+          <div class="wn-skill">retrospective</div>
+          <div class="wn-badge green" id="wnRetroBadge">For COMPLETED</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     SCREEN: DASHBOARD
+     ================================================================ -->
+<div id="screenDashboard" class="screen">
+  <div class="container">
+    <div class="card">
+      <div class="card-title">📊 Project Status Dashboard</div>
+      <div class="card-sub">All projects at a glance. Last updated from OneHub submissions.</div>
+      <div class="dash-stats" id="dashStats"></div>
+      <div class="dash-grid" id="dashGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     SCREEN: SETTINGS
+     ================================================================ -->
+<div id="screenSettings" class="screen">
+  <div class="container">
+    <div class="card">
+      <div class="card-title">⚙️ Settings</div>
+      <div class="card-sub">Configure channels, column mappings, and AI behavior. Changes save automatically.</div>
+
+      <!-- AI Mode -->
+      <div class="settings-section">
+        <div class="settings-label">🤖 AI Parse Mode</div>
+        <div class="channel-row">
+          <div class="channel-icon">⚡</div>
+          <div class="channel-info">
+            <div class="channel-name">Real Claude API</div>
+            <div class="channel-desc">Uses live Claude API for parsing. Requires API key below.</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="toggleRealAI" onchange="saveSettings()"><span class="toggle-slider"></span></label>
+        </div>
+        <input class="settings-input" id="claudeApiKey" type="password" placeholder="sk-ant-... (Claude API key)" oninput="saveSettings()" style="margin-top:8px">
+        <div style="font-size:11px;color:var(--gray-3)">Key stored in browser localStorage only. Never sent anywhere except api.anthropic.com.</div>
+      </div>
+
+      <!-- Live Auth Tokens -->
+      <div class="settings-section">
+        <div class="settings-label">🔑 API Credentials</div>
+        <div style="font-size:12px;color:var(--gray-3);margin-bottom:12px">Required for live writes. Stored in browser only — never sent anywhere except the respective API.</div>
+
+        <div class="channel-row" style="margin-bottom:8px">
+          <div class="channel-icon"><svg width="24" height="24"><use href="#logo-jira"/></svg></div>
+          <div class="channel-info">
+            <div class="channel-name">Jira Personal Access Token</div>
+            <div class="channel-desc">Generate at <strong>id.atlassian.com → Security → API tokens</strong></div>
+          </div>
+          <div class="live-dot" id="jiraDot" title="Not configured"></div>
+        </div>
+        <input class="settings-input" id="jiraPat" type="password" placeholder="Jira PAT (or leave blank to use browser SSO)" oninput="saveSettings();updateLiveDots()">
+        <button class="test-btn" onclick="testJira()" style="margin-bottom:12px">🧪 Test Jira</button>
+        <div id="jiraTestResult"></div>
+
+        <div class="channel-row" style="margin-bottom:8px;margin-top:4px">
+          <div class="channel-icon"><svg width="24" height="24"><use href="#logo-smartsheet"/></svg></div>
+          <div class="channel-info">
+            <div class="channel-name">Smartsheet API Token</div>
+            <div class="channel-desc">Generate at <strong>app.smartsheet.com → Account → Personal Settings → API Access</strong></div>
+          </div>
+          <div class="live-dot" id="smartsheetDot" title="Not configured"></div>
+        </div>
+        <input class="settings-input" id="smartsheetToken" type="password" placeholder="Smartsheet API token" oninput="saveSettings();updateLiveDots()">
+        <button class="test-btn" onclick="testSmartsheet()">🧪 Test Smartsheet</button>
+        <div id="smartsheetTestResult"></div>
+      </div>
+
+      <!-- Channels -->
+      <div class="settings-section">
+        <div class="settings-label">📡 Update Channels</div>
+
+        <div class="channel-row">
+          <div class="channel-icon"><svg width="24" height="24"><use href="#logo-jira"/></svg></div>
+          <div class="channel-info">
+            <div class="channel-name">Jira</div>
+            <div class="channel-desc">Post structured comment to the selected issue</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="chJira" checked onchange="saveSettings()"><span class="toggle-slider"></span></label>
+        </div>
+
+        <div class="channel-row">
+          <div class="channel-icon"><svg width="24" height="24"><use href="#logo-smartsheet"/></svg></div>
+          <div class="channel-info">
+            <div class="channel-name">Smartsheet</div>
+            <div class="channel-desc">Find & update project row (or create fallback)</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="chSmartsheet" checked onchange="saveSettings()"><span class="toggle-slider"></span></label>
+        </div>
+        <!-- Smartsheet config -->
+        <div style="margin:10px 0 0 44px;padding:14px;background:var(--gray-1);border-radius:8px" id="ssConfig">
+          <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--gray-4)">SMARTSHEET CONFIGURATION</div>
+          <input class="settings-input" id="ssSheetUrl" placeholder="Paste Smartsheet URL here to auto-discover columns" oninput="saveSettings()">
+          <button class="test-btn" onclick="discoverSmartsheetColumns()" style="margin-bottom:10px">🔍 Discover Columns</button>
+          <div id="ssDiscoverResult"></div>
+          <div id="ssColMap"></div>
+        </div>
+
+        <div class="channel-row">
+          <div class="channel-icon"><svg width="24" height="24"><use href="#logo-slack"/></svg></div>
+          <div class="channel-info">
+            <div class="channel-name">Slack</div>
+            <div class="channel-desc">Post leadership summary to a Slack channel</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="chSlack" onchange="toggleSlackConfig();saveSettings()"><span class="toggle-slider"></span></label>
+        </div>
+        <div style="margin:10px 0 0 44px;padding:14px;background:var(--gray-1);border-radius:8px;display:none" id="slackConfig">
+          <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--gray-4)">SLACK CONFIGURATION</div>
+          <input class="settings-input" id="slackWebhook" type="password" placeholder="Slack Incoming Webhook URL (https://hooks.slack.com/...)" oninput="saveSettings()">
+          <input class="settings-input" id="slackChannel" placeholder="Channel name e.g. #project-status" oninput="saveSettings()">
+          <button class="test-btn" onclick="testSlack()">🧪 Test Connection</button>
+          <div id="slackTestResult"></div>
+        </div>
+
+        <div class="channel-row">
+          <div class="channel-icon"><svg width="24" height="24"><use href="#logo-gsheets"/></svg></div>
+          <div class="channel-info">
+            <div class="channel-name">Google Sheets</div>
+            <div class="channel-desc">Coming soon — update a Google Sheet row</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="chGSheets" disabled><span class="toggle-slider"></span></label>
+        </div>
+
+        <div class="channel-row">
+          <div class="channel-icon"><svg width="24" height="24"><use href="#logo-gslides"/></svg></div>
+          <div class="channel-info">
+            <div class="channel-name">Google Slides</div>
+            <div class="channel-desc">Coming soon — inject status into slide template</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="chGSlides" disabled><span class="toggle-slider"></span></label>
+        </div>
+
+        <div class="channel-row">
+          <div class="channel-icon"><svg width="24" height="24"><use href="#logo-email"/></svg></div>
+          <div class="channel-info">
+            <div class="channel-name">Email Summary</div>
+            <div class="channel-desc">Coming soon — send leadership summary via email</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="chEmail" disabled><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+
+      <!-- Projects -->
+      <div class="settings-section">
+        <div class="settings-label">📁 Projects</div>
+        <div id="projectsList"></div>
+        <button class="btn btn-sm btn-secondary" onclick="addProject()" style="margin-top:10px">+ Add Project</button>
+      </div>
+
+      <div class="action-row">
+        <button class="btn btn-primary" onclick="saveSettings();toast('Settings saved.')">💾 Save Settings</button>
+        <button class="btn btn-gray" onclick="resetSettings()">↺ Reset to Defaults</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   CONFIG — Jira (matches Sprint Command Center)
+   ================================================================ */
+const JIRA_BASE = 'https://jira.cloud.intuit.com';
+const BOARD_ID = 1165;
+const PROJECT_KEY = 'CGCX';
+const CLOUD_ID = 'f8519793-3215-4b8b-9f9a-3c66dd15afc5';
+
+/* ================================================================
+   DEFAULT SETTINGS
+   ================================================================ */
+const DEFAULT_SETTINGS = {
+  useRealAI: false,
+  claudeApiKey: '',
+  jiraPat: '',
+  smartsheetToken: '',
+  channels: { jira: true, smartsheet: true, slack: false, gsheets: false, gslides: false },
+  smartsheet: {
+    sheetId: '8673194345975684',
+    sheetUrl: '',
+    colMap: {
+      taskName:   1842895663615876,
+      status:     6346495290986372,
+      stage:      4094695477301124,
+      commentary: 6065020314275716,
+      comments:   3813220500590468,
+      priority:   4376170454011780
+    },
+    statusMap: { GREEN: 'G', AMBER: 'Y', RED: 'R' },
+    stageMap:  { 'COMPLETED': 'C', 'IN PROGRESS': 'IP', 'NOT STARTED': 'NS' }
+  },
+  slack: { webhook: '', channel: '' },
+  projects: [
+    { key: 'CGCX-1246', label: 'CK/TT Overlap Dashboard' },
+    { key: 'CGCX-1190', label: 'FY26 Migration Prep' },
+    { key: 'CGCX-1210', label: 'CRM Integration' },
+    { key: 'CGCX-1098', label: 'DS Community Track' },
+    { key: 'CGCX-9999', label: 'CG Efficiencies Core Team' }
+  ]
+};
+
+/* ================================================================
+   STATE
+   ================================================================ */
+let settings = loadSettings();
+let parsed = null;
+let rawUpdateText = '';
+let selectedProject = '';
+let updateHistory = lsGet('onehub_history', []);
+let parseStartTime = 0;
+
+/* ================================================================
+   PERSISTENCE
+   ================================================================ */
+function lsGet(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+}
+function lsSet(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+function loadSettings() {
+  const saved = lsGet('onehub_settings', null);
+  if (!saved) return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+  // Deep merge so new keys from DEFAULT_SETTINGS always exist
+  return deepMerge(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), saved);
+}
+function deepMerge(target, source) {
+  for (const k of Object.keys(source)) {
+    if (source[k] && typeof source[k] === 'object' && !Array.isArray(source[k])) {
+      target[k] = deepMerge(target[k] || {}, source[k]);
+    } else { target[k] = source[k]; }
+  }
+  return target;
+}
+function saveSettings() {
+  settings.useRealAI = document.getElementById('toggleRealAI')?.checked || false;
+  settings.claudeApiKey = document.getElementById('claudeApiKey')?.value || '';
+  settings.jiraPat = document.getElementById('jiraPat')?.value || '';
+  settings.smartsheetToken = document.getElementById('smartsheetToken')?.value || '';
+  settings.channels.jira = document.getElementById('chJira')?.checked || false;
+  settings.channels.smartsheet = document.getElementById('chSmartsheet')?.checked || false;
+  settings.channels.slack = document.getElementById('chSlack')?.checked || false;
+  settings.slack.webhook = document.getElementById('slackWebhook')?.value || '';
+  settings.slack.channel = document.getElementById('slackChannel')?.value || '';
+  settings.smartsheet.sheetUrl = document.getElementById('ssSheetUrl')?.value || '';
+  lsSet('onehub_settings', settings);
+  updateLiveDots();
+  updateReadinessBar();
+}
+function resetSettings() {
+  if (!confirm('Reset all settings to defaults?')) return;
+  settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+  lsSet('onehub_settings', settings);
+  renderSettingsUI();
+  toast('Settings reset to defaults.');
+}
+
+/* ================================================================
+   SCREEN ROUTING
+   ================================================================ */
+// Mid-flow screens where navigating away would lose work
+const MID_FLOW_SCREENS = ['screenConfirm', 'screenParsing'];
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+  document.querySelectorAll('.topbar-btn').forEach(b => b.classList.remove('active'));
+  if (id === 'screenInput')     document.getElementById('navUpdate')?.classList.add('active');
+  if (id === 'screenDashboard') document.getElementById('navDash')?.classList.add('active');
+  if (id === 'screenSettings')  document.getElementById('navSettings')?.classList.add('active');
+}
+
+// Safe navigation — warns if user is mid-flow
+function safeNavigate(dest) {
+  const active = document.querySelector('.screen.active');
+  const isInFlow = active && MID_FLOW_SCREENS.includes(active.id);
+  if (isInFlow) {
+    showNavWarning(dest);
+    return;
+  }
+  navigateTo(dest);
+}
+
+function navigateTo(dest) {
+  if (dest === 'dashboard') { renderDashboard(); showScreen('screenDashboard'); }
+  else if (dest === 'settings') { renderSettingsUI(); showScreen('screenSettings'); }
+  else { showScreen(dest); }
+}
+
+function showNavWarning(dest) {
+  // Inject modal if not present
+  let modal = document.getElementById('navWarningModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'navWarningModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:12px;padding:28px 32px;max-width:400px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+        <div style="font-size:22px;margin-bottom:12px">⚠️</div>
+        <div style="font-size:17px;font-weight:700;margin-bottom:8px">Leave this page?</div>
+        <div style="font-size:13px;color:var(--gray-4);margin-bottom:24px;line-height:1.6">
+          You have an update in progress. If you leave now, your parsed results will be lost and you'll need to start over.
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <button id="navWarnConfirm" class="btn btn-danger">Leave anyway</button>
+          <button id="navWarnCancel" class="btn btn-gray">Stay here</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+  document.getElementById('navWarnConfirm').onclick = () => {
+    modal.style.display = 'none';
+    navigateTo(dest);
+  };
+  document.getElementById('navWarnCancel').onclick = () => {
+    modal.style.display = 'none';
+  };
+}
+
+function goToInput() { showScreen('screenInput'); }
+function showDashboard() { renderDashboard(); showScreen('screenDashboard'); }
+function showSettings() { renderSettingsUI(); showScreen('screenSettings'); }
+
+/* ================================================================
+   EXAMPLES
+   ================================================================ */
+const EXAMPLES = [
+  "The CK/TT Overlap Dashboard is about 70% done. We shipped the data layer last week and the UI is in progress. Main blocker is the API token from the platform team — still waiting on access. Plan is to have a working demo ready by end of this week.",
+  "We're blocked. The CRM integration can't move forward until IT provisions the OAuth credentials. I've escalated twice and have a meeting with them on Thursday. Everything else is ready — just waiting on that one dependency.",
+  "Wrapped up! The DS Community Track monthly sessions are fully launched. Q2 schedule is published, attendance was solid for session 1. Marking this complete.",
+  "Red flag on the FY26 Migration Prep timeline. The source data extract is taking 3x longer than estimated. We're likely 2 weeks behind now. Need a decision on whether to scope down or push the deadline."
+];
+function setExample(idx) {
+  document.getElementById('updateInput').value = EXAMPLES[idx];
+  updateCharCount();
+}
+function updateCharCount() {
+  document.getElementById('charCount').textContent = document.getElementById('updateInput').value.length;
+}
+
+/* ================================================================
+   KEYBOARD SHORTCUT — Cmd/Ctrl + Enter
+   ================================================================ */
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    const screen = document.querySelector('.screen.active');
+    if (screen?.id === 'screenInput') parseUpdate();
+  }
+});
+
+/* ================================================================
+   STEP 1 → PARSE
+   ================================================================ */
+function clearFieldError(fieldId, errorId) {
+  document.getElementById(fieldId)?.classList.remove('error');
+  document.getElementById(errorId)?.classList.remove('show');
+}
+
+async function parseUpdate() {
+  const text = document.getElementById('updateInput').value.trim();
+  const project = document.getElementById('projectSelect').value;
+
+  // Inline validation — show errors adjacent to the fields
+  let hasError = false;
+  if (!project) {
+    document.getElementById('projectSelect').classList.add('error');
+    document.getElementById('projectError').classList.add('show');
+    hasError = true;
+  }
+  if (!text) {
+    document.getElementById('updateInput').classList.add('error');
+    document.getElementById('textError').classList.add('show');
+    hasError = true;
+  }
+  if (hasError) {
+    // Scroll to first error
+    document.querySelector('.field-error.show')?.scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
+
+  selectedProject = project;
+  rawUpdateText = text;
+  parseStartTime = Date.now();
+
+  showScreen('screenParsing');
+  await animateParseSteps();
+
+  if (settings.useRealAI && settings.claudeApiKey) {
+    parsed = await claudeApiParse(text, project);
+  } else {
+    parsed = claudeLocalParse(text, project);
+  }
+
+  renderConfirmScreen();
+  showScreen('screenConfirm');
+}
+
+async function animateParseSteps() {
+  const steps = ['ps1','ps2','ps3','ps4','ps5','ps6'];
+  const msgs = ['Extracting RAG status…','Identifying blockers…','Detecting progress signal…','Inferring next steps…','Scoring confidence…','Generating summary…'];
+  for (let i = 0; i < steps.length; i++) {
+    if (i > 0) document.getElementById(steps[i-1]).className = 'parse-step done';
+    document.getElementById(steps[i]).className = 'parse-step active';
+    document.getElementById(steps[i]).querySelector('.parse-step-icon').textContent = i < steps.length - 1 ? '●' : '●';
+    document.getElementById('parseStatusMsg').textContent = msgs[i];
+    await sleep(settings.useRealAI && settings.claudeApiKey ? 300 : 360);
+  }
+  document.getElementById(steps[steps.length-1]).className = 'parse-step done';
+}
+
+/* ================================================================
+   CLAUDE API PARSE (real)
+   ================================================================ */
+async function claudeApiParse(text, project) {
+  const projectLabel = project.split('·')[1]?.trim() || project;
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': settings.claudeApiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 512,
+        messages: [{
+          role: 'user',
+          content: `You are a project status parser. Extract structured fields from this project update and return ONLY valid JSON with these exact keys:
+{
+  "rag": "GREEN" | "AMBER" | "RED",
+  "ragReason": "one sentence explaining why",
+  "progress": "COMPLETED" | "IN PROGRESS" | "NOT STARTED",
+  "pct": number or null,
+  "blocker": "string or null",
+  "nextSteps": "string or null",
+  "priority": "P0" | "P1" | "P2" | "P3" | "P4",
+  "confidence": number 0-100,
+  "summary": "2-sentence leadership summary"
+}
+
+Project: ${projectLabel}
+Update: ${text}
+
+Return ONLY the JSON object, no other text.`
+        }]
+      })
+    });
+    if (!resp.ok) throw new Error(`API ${resp.status}`);
+    const data = await resp.json();
+    const jsonStr = data.content[0].text.trim();
+    const result = JSON.parse(jsonStr);
+    result.projectLabel = projectLabel;
+    result.project = project;
+    result.aiMode = 'claude-api';
+    return result;
+  } catch (e) {
+    console.warn('Claude API failed, falling back to local parse:', e);
+    const fallback = claudeLocalParse(text, project);
+    fallback.aiMode = 'local-fallback';
+    return fallback;
+  }
+}
+
+/* ================================================================
+   LOCAL PARSE ENGINE (fallback / no-API mode)
+   ================================================================ */
+function claudeLocalParse(text, project) {
+  const t = text.toLowerCase();
+  const projectLabel = project.split('·')[1]?.trim() || project;
+
+  // RAG — tiered detection: RED only for explicit risk signals, AMBER for blockers/dependencies
+  let rag = 'GREEN', ragReason = 'Project progressing normally';
+  const isExplicitRed = /\bred\b|at risk|timeline risk|behind schedule|critical|escalat|miss.*deadline|weeks? behind|flag/.test(t);
+  const hasBlocker    = /\bblock(?:er|ed)?\b|can't move|cannot move|waiting on.*credentials|waiting on.*access|waiting on.*approval/.test(t);
+  const hasDependency = /\bwait(?:ing)?\b|\bdepend(?:s|ing)?\b|\bpending\b|\bhold\b|\bnot sure\b|\bconcern\b|\bslow\b|\bamber\b|\byellow\b/.test(t);
+  const isDone        = /\bdone\b|\bcomplet(?:e|ed)?\b|\bfinish(?:ed)?\b|\bwrap(?:ped)?\b|\blaunch(?:ed)?\b|\bship(?:ped)?\b|\bmarking this\b/.test(t);
+
+  if (isExplicitRed) {
+    rag = 'RED'; ragReason = 'Explicit timeline risk or critical issue detected';
+  } else if (hasBlocker) {
+    rag = 'AMBER'; ragReason = 'Blocker present — escalation may be needed';
+  } else if (hasDependency) {
+    rag = 'AMBER'; ragReason = 'Dependency or concern present';
+  } else if (isDone && !hasBlocker && !hasDependency) {
+    rag = 'GREEN'; ragReason = 'Milestone completed';
+  }
+
+  // Progress — must be consistent with RAG
+  // Rule: COMPLETED only allowed when RAG is GREEN. RED/AMBER forces IN PROGRESS minimum.
+  let progress = 'IN PROGRESS';
+  if (/not start|haven't start|plan to start|upcoming/.test(t)) {
+    progress = 'NOT STARTED';
+  } else if (/\bdone\b|\bcomplet(?:e|ed)?\b|\bfinish(?:ed)?\b|\bwrap(?:ped)?\b|\blaunch(?:ed)?\b|\bship(?:ped)?\b|\bmarking this\b/.test(t)) {
+    progress = 'COMPLETED';
+  }
+  // Enforce consistency: can't be COMPLETED if RAG is RED or AMBER
+  if (progress === 'COMPLETED' && (rag === 'RED' || rag === 'AMBER')) {
+    progress = 'IN PROGRESS';
+  }
+
+  // Blocker
+  let blocker = null;
+  const bPatterns = [
+    /block(?:er)? (?:is |on |:)?([^.!?]{5,60})/i,
+    /wait(?:ing)? (?:on|for) ([^.!?]{5,60})/i,
+    /can't move (?:forward|ahead) until ([^.!?]{5,60})/i,
+    /depend(?:ing)? on ([^.!?]{5,60})/i,
+    /still need(?:ing)? ([^.!?]{5,60})/i,
+  ];
+  for (const p of bPatterns) { const m = text.match(p); if (m) { blocker = cap(m[1].trim().replace(/[,;].*$/,'')); break; } }
+
+  // Pct
+  let pct = null;
+  const pm = text.match(/(\d{1,3})\s*%/);
+  if (pm) pct = parseInt(pm[1]);
+
+  // Next steps
+  let nextSteps = null;
+  const nPatterns = [
+    /(?:plan(?:ning)?|aim(?:ing)?|expect(?:ing)?) to ([^.!?]{5,80})/i,
+    /(?:goal|target) (?:is )?([^.!?]{5,80})/i,
+    /next step[s]? (?:is |are )?([^.!?]{5,80})/i,
+  ];
+  for (const p of nPatterns) { const m = text.match(p); if (m) { nextSteps = cap(m[0].replace(/^(?:plan(?:ning)?|aim(?:ing)?|expect(?:ing)?) to /i,'').trim()); break; } }
+
+  // Priority
+  let priority = 'P2';
+  if (/p0|critical|emergency/.test(t)) priority = 'P0';
+  else if (/p1|high.priority|urgent/.test(t)) priority = 'P1';
+  else if (/p3|low.priority|nice.to.have/.test(t)) priority = 'P3';
+
+  // Confidence
+  let confidence = 65;
+  const factors = [];
+  if (blocker) { confidence += 10; factors.push({label:'Blocker detected', hit:true}); } else { factors.push({label:'No blocker found',hit:false}); }
+  if (pct !== null) { confidence += 10; factors.push({label:`Progress % found (${pct}%)`,hit:true}); } else { factors.push({label:'No % mentioned',hit:false}); }
+  if (nextSteps) { confidence += 8; factors.push({label:'Next steps identified',hit:true}); } else { factors.push({label:'Next steps unclear',hit:false}); }
+  if (text.length > 150) { confidence += 7; factors.push({label:'Sufficient detail',hit:true}); } else { factors.push({label:'Short update',hit:false}); }
+  confidence = Math.min(confidence, 97);
+
+  // Summary
+  let summary = '';
+  if (rag === 'GREEN') summary = `${projectLabel} is progressing well${pct !== null ? ` at ${pct}% complete` : ''}. ${nextSteps ? 'Next: ' + nextSteps + '.' : 'Team is on track.'}`;
+  else if (rag === 'AMBER') summary = `${projectLabel} has a dependency causing a hold${blocker ? ` (${blocker})` : ''}. Team is actively working to resolve it.`;
+  else summary = `${projectLabel} has a critical blocker${blocker ? ` — ${blocker}` : ''} and may be at timeline risk. Escalation and decision needed.`;
+
+  return { rag, ragReason, progress, blocker, pct, nextSteps, priority, confidence, factors, summary, projectLabel, project, aiMode: 'local' };
+}
+
+function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+/* ================================================================
+   RENDER CONFIRM SCREEN
+   ================================================================ */
+function renderConfirmScreen() {
+  const p = parsed;
+  document.getElementById('confirmProjectLabel').textContent =
+    `${p.project} — ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}`;
+
+  const ragClass = p.rag==='GREEN'?'badge-green':p.rag==='AMBER'?'badge-gold':'badge-red';
+  const ragIcon  = p.rag==='GREEN'?'🟢':p.rag==='AMBER'?'🟡':'🔴';
+  const confClass = p.confidence>=80?'conf-high':p.confidence>=60?'conf-med':'conf-low';
+  const confLabel = p.confidence>=80?'High confidence':p.confidence>=60?'Medium — review carefully':'Low — please review all fields';
+  const aiLabel = p.aiMode==='claude-api'?'<span class="badge badge-purple">Claude API</span>':'<span class="badge badge-gray">Local Engine</span>';
+
+  const factorsHTML = (p.factors||[]).map(f=>
+    `<div class="conf-factor ${f.hit?'hit':''}">
+      <span>${f.hit?'✓':'○'}</span> ${f.label}
+    </div>`).join('');
+
+  document.getElementById('parsedFields').innerHTML = `
+    <div class="parse-field">
+      <div class="pf-label">AI Mode</div>
+      <div class="pf-value">${aiLabel}</div>
+    </div>
+    <div class="parse-field">
+      <div class="pf-label">RAG Status</div>
+      <div class="pf-value">
+        <span class="badge ${ragClass}">${ragIcon} ${p.rag}</span>
+        <div style="font-size:12px;color:var(--gray-3);margin-top:6px">${p.ragReason}</div>
+      </div>
+    </div>
+    <div class="parse-field">
+      <div class="pf-label">Progress</div>
+      <div class="pf-value">
+        <span class="badge badge-blue">${p.progress}</span>
+        ${p.pct!==null?`<span style="font-size:13px;color:var(--gray-4);margin-left:8px">${p.pct}% complete</span>`:''}
+      </div>
+    </div>
+    <div class="parse-field">
+      <div class="pf-label">Blocker</div>
+      <div class="pf-value" id="pfBlocker">
+        ${p.blocker?`<span style="color:var(--red);font-weight:600">⚠️ ${p.blocker}</span>`:'<span style="color:var(--gray-3)">None detected</span>'}
+        <span class="pf-edit" onclick="editField('blocker')">Edit</span>
+      </div>
+    </div>
+    <div class="parse-field">
+      <div class="pf-label">Next Steps</div>
+      <div class="pf-value" id="pfNextSteps">
+        ${p.nextSteps||'<span style="color:var(--gray-3)">None detected</span>'}
+        <span class="pf-edit" onclick="editField('nextSteps')">Edit</span>
+      </div>
+    </div>
+    <div class="parse-field">
+      <div class="pf-label">Priority</div>
+      <div class="pf-value"><span class="badge badge-gray">${p.priority}</span></div>
+    </div>
+    <div class="parse-field">
+      <div class="pf-label">Confidence</div>
+      <div class="pf-value">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div>
+            <div class="conf-bar"><div class="conf-fill ${confClass}" style="width:${p.confidence}%"></div></div>
+            <div class="conf-label">${p.confidence}% — ${confLabel}</div>
+          </div>
+          <span class="pf-edit" onclick="toggleConfExplainer()" style="white-space:nowrap">Why?</span>
+        </div>
+        <div class="conf-explainer" id="confExplainer">${factorsHTML||'<div style="font-size:12px;color:var(--gray-4)">Factors not available in API mode.</div>'}</div>
+      </div>
+    </div>
+    <div class="parse-field" style="background:var(--gray-1);border-radius:8px;padding:14px 16px;margin-top:8px;border:none">
+      <div class="pf-label">Summary</div>
+      <div class="pf-value" id="pfSummary" style="font-style:italic">${p.summary}
+        <span class="pf-edit" onclick="editField('summary')">Edit</span>
+      </div>
+    </div>`;
+
+  // Channel preview
+  const channelPreview = getActiveChannels().map(ch => `
+    <div class="channel-row">
+      <div class="channel-icon">${ch.icon}</div>
+      <div class="channel-info">
+        <div class="channel-name">${ch.name}</div>
+        <div class="channel-desc">${ch.destLabel(parsed)}</div>
+      </div>
+      <span class="badge badge-green">Active</span>
+    </div>`).join('');
+  document.getElementById('channelPreviewList').innerHTML = channelPreview || '<div style="color:var(--gray-3);font-size:13px">No channels enabled. Go to Settings to enable channels.</div>';
+}
+
+function toggleConfExplainer() {
+  document.getElementById('confExplainer').classList.toggle('open');
+}
+
+/* ================================================================
+   INLINE FIELD EDITOR
+   ================================================================ */
+function editField(field) {
+  const el = document.getElementById('pf' + field.charAt(0).toUpperCase() + field.slice(1));
+  const current = parsed[field] || '';
+  el.innerHTML = `<input class="editable-input" id="editInput_${field}" value="${String(current).replace(/"/g,'&quot;')}" />
+    <button class="btn btn-sm btn-primary" style="margin-top:8px" onclick="saveField('${field}')">Save</button>`;
+  document.getElementById(`editInput_${field}`).focus();
+}
+function saveField(field) {
+  parsed[field] = document.getElementById(`editInput_${field}`).value;
+  renderConfirmScreen();
+  toast('Field updated.');
+}
+
+/* ================================================================
+   CHANNEL REGISTRY
+   ================================================================ */
+function getActiveChannels() {
+  const chs = [];
+  if (settings.channels.jira) chs.push({
+    id: 'jira', name: 'Jira', icon: '<svg width="24" height="24"><use href="#logo-jira"/></svg>',
+    destLabel: p => `Comment on ${p.project.split('·')[0].trim()}`,
+    async write(p, rawText) { return writeJira(p, rawText); }
+  });
+  if (settings.channels.smartsheet) chs.push({
+    id: 'smartsheet', name: 'Smartsheet', icon: '<svg width="24" height="24"><use href="#logo-smartsheet"/></svg>',
+    destLabel: () => 'Find & update row on FY26 Fast Money Schedule',
+    async write(p, rawText) { return writeSmartsheet(p, rawText); }
+  });
+  if (settings.channels.slack) chs.push({
+    id: 'slack', name: 'Slack', icon: '<svg width="24" height="24"><use href="#logo-slack"/></svg>',
+    destLabel: () => `Post to ${settings.slack.channel || '#status'}`,
+    async write(p) { return writeSlack(p); }
+  });
+  return chs;
+}
+
+/* ================================================================
+   STEP 2 → WRITE
+   ================================================================ */
+async function confirmAndWrite() {
+  const channels = getActiveChannels();
+  if (channels.length === 0) { toast('No channels enabled. Go to Settings first.'); return; }
+
+  showScreen('screenWriting');
+  const log = document.getElementById('writeLog');
+  const liveTargets = document.getElementById('writeTargetsLive');
+  const addLog = msg => { log.innerHTML += `<div>→ ${msg}</div>`; };
+
+  // Init all channel tiles
+  liveTargets.innerHTML = channels.map(ch => `
+    <div class="write-target pending" id="wt_${ch.id}">
+      <div class="wt-icon">${ch.icon}</div>
+      <div class="wt-name">${ch.name}</div>
+      <div class="wt-status blue" id="wts_${ch.id}">Queued…</div>
+    </div>`).join('');
+
+  const results = {};
+  for (const ch of channels) {
+    setWTState(ch.id, 'writing', 'Writing…');
+    addLog(`${ch.icon} Writing to ${ch.name}…`);
+    try {
+      const res = await ch.write(parsed, rawUpdateText);
+      results[ch.id] = { ok: true, msg: res };
+      setWTState(ch.id, 'done', `✓ ${res}`);
+      addLog(`✓ ${ch.name} — ${res}`);
+    } catch (e) {
+      results[ch.id] = { ok: false, msg: e.message };
+      setWTState(ch.id, 'failed', `✗ ${e.message}`);
+      addLog(`✗ ${ch.name} failed: ${e.message}`);
+    }
+    await sleep(300);
+  }
+
+  addLog('✓ Leadership summary generated');
+  await sleep(500);
+
+  // Save to history
+  updateHistory.unshift({
+    project: parsed.projectLabel, projectKey: parsed.project,
+    rag: parsed.rag, summary: parsed.summary,
+    timestamp: Date.now(), channels: Object.keys(results)
+  });
+  if (updateHistory.length > 20) updateHistory = updateHistory.slice(0, 20);
+  lsSet('onehub_history', updateHistory);
+
+  renderDoneScreen(results, channels);
+  showScreen('screenDone');
+}
+
+function setWTState(id, state, msg) {
+  const el = document.getElementById(`wt_${id}`);
+  if (el) el.className = `write-target ${state}`;
+  const st = document.getElementById(`wts_${id}`);
+  if (st) { st.textContent = msg; st.className = `wt-status ${state==='done'?'green':state==='failed'?'red':'blue'}`; }
+}
+
+/* ================================================================
+   JIRA WRITER
+   ================================================================ */
+async function writeJira(p, rawText) {
+  const issueKey = p.project.split('·')[0].trim().split(' ')[0];
+  const comment = buildJiraComment(p, rawText);
+  const pat = settings.jiraPat;
+  const headers = { 'Content-Type':'application/json', 'Accept':'application/json' };
+  if (pat) headers['Authorization'] = `Basic ${btoa(`mike_sedillo@intuit.com:${pat}`)}`;
+  try {
+    const resp = await fetch(
+      `https://api.atlassian.com/ex/jira/${CLOUD_ID}/rest/api/3/issue/${issueKey}/comment`,
+      { method:'POST', headers, ...(pat ? {} : {credentials:'include'}), body: JSON.stringify({body: comment}) }
+    );
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return `Comment posted to ${issueKey}`;
+  } catch(e) {
+    if (pat) throw e; // Real token set — surface the real error
+    await sleep(400);
+    return `Comment posted to ${issueKey} (demo)`;
+  }
+}
+
+function buildJiraComment(p, rawText) {
+  const ragLabel = {GREEN:'🟢 GREEN', AMBER:'🟡 AMBER', RED:'🔴 RED'}[p.rag];
+  return {
+    version:1, type:'doc',
+    content:[
+      {type:'paragraph',content:[{type:'text',text:`Status Update — ${new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`,marks:[{type:'strong'}]}]},
+      {type:'paragraph',content:[{type:'text',text:`RAG: ${ragLabel}  |  Progress: ${p.progress}${p.pct!==null?` (${p.pct}%)`:''}  |  Priority: ${p.priority}`}]},
+      ...(p.blocker?[{type:'paragraph',content:[{type:'text',text:`⚠️ Blocker: ${p.blocker}`}]}]:[]),
+      ...(p.nextSteps?[{type:'paragraph',content:[{type:'text',text:`▶️ Next: ${p.nextSteps}`}]}]:[]),
+      {type:'paragraph',content:[{type:'text',text:`Original: ${rawText}`}]},
+      {type:'paragraph',content:[{type:'text',text:'Posted via OneHub AI Status Hub',marks:[{type:'em'}]}]}
+    ]
+  };
+}
+
+/* ================================================================
+   SMARTSHEET WRITER
+   ================================================================ */
+async function writeSmartsheet(p, rawText) {
+  const ss = settings.smartsheet;
+  const sheetId = ss.sheetId;
+  const ragVal = ss.statusMap[p.rag] || p.rag;
+  const stageVal = ss.stageMap[p.progress] || 'IP';
+
+  const updatedCells = [
+    { columnId: ss.colMap.status,      value: ragVal },
+    { columnId: ss.colMap.stage,       value: stageVal },
+    { columnId: ss.colMap.commentary,  value: p.summary },
+    { columnId: ss.colMap.comments,    value: rawText.substring(0,500) },
+    { columnId: ss.colMap.priority,    value: p.priority }
+  ].filter(c => c.columnId);
+
+  const ssToken = settings.smartsheetToken;
+  const ssHeaders = { 'Accept':'application/json', ...(ssToken ? {'Authorization':`Bearer ${ssToken}`} : {}) };
+  const ssWriteHeaders = { ...ssHeaders, 'Content-Type':'application/json' };
+
+  try {
+    // Find matching row
+    const sheetResp = await fetch(`https://api.smartsheet.com/2.0/sheets/${sheetId}`,
+      { headers: ssHeaders, ...(ssToken ? {} : {credentials:'include'}) });
+    let matchedRowId = null;
+    if (sheetResp.ok) {
+      const sheet = await sheetResp.json();
+      const pLabel = p.projectLabel.toLowerCase();
+      for (const row of (sheet.rows||[])) {
+        const cell = row.cells.find(c => c.columnId === ss.colMap.taskName);
+        const val = (cell?.displayValue||cell?.value||'').toLowerCase();
+        if (val && (val.includes(pLabel.split(' ')[0]) || pLabel.includes(val.split(' ')[0]))) {
+          matchedRowId = row.id; break;
+        }
+      }
+    }
+
+    let method = 'POST', body;
+    if (matchedRowId) {
+      method = 'PUT';
+      body = JSON.stringify({ rows:[{ id: matchedRowId, cells: updatedCells }] });
+    } else {
+      body = JSON.stringify({ rows:[{ toBottom:true, cells:[
+        { columnId: ss.colMap.taskName, value: p.projectLabel }, ...updatedCells
+      ]}]});
+    }
+
+    const resp = await fetch(`https://api.smartsheet.com/2.0/sheets/${sheetId}/rows`,
+      { method, headers: ssWriteHeaders, ...(ssToken ? {} : {credentials:'include'}), body });
+
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return matchedRowId ? 'Row updated' : 'New row created';
+  } catch(e) {
+    if (ssToken) throw e; // Real token set — surface the real error
+    await sleep(500);
+    return 'Row updated (demo)';
+  }
+}
+
+/* ================================================================
+   SLACK WRITER
+   ================================================================ */
+async function writeSlack(p) {
+  const ragIcon = p.rag==='GREEN'?'🟢':p.rag==='AMBER'?'🟡':'🔴';
+  const payload = {
+    text: `*${p.projectLabel}* — Status Update`,
+    blocks:[
+      { type:'header', text:{ type:'plain_text', text:`${ragIcon} ${p.projectLabel} — Status Update` }},
+      { type:'section', fields:[
+        { type:'mrkdwn', text:`*RAG:*\n${ragIcon} ${p.rag}` },
+        { type:'mrkdwn', text:`*Progress:*\n${p.progress}${p.pct!==null?` (${p.pct}%)`:''}` },
+        { type:'mrkdwn', text:`*Priority:*\n${p.priority}` },
+        { type:'mrkdwn', text:`*Project:*\n${p.project.split('·')[0].trim()}` }
+      ]},
+      { type:'section', text:{ type:'mrkdwn', text:`*Summary:*\n${p.summary}` }},
+      ...(p.blocker?[{ type:'section', text:{ type:'mrkdwn', text:`*⚠️ Blocker:* ${p.blocker}` }}]:[]),
+      ...(p.nextSteps?[{ type:'section', text:{ type:'mrkdwn', text:`*▶️ Next:* ${p.nextSteps}` }}]:[]),
+      { type:'context', elements:[{ type:'mrkdwn', text:'Posted via OneHub AI Status Hub' }]}
+    ]
+  };
+  const webhook = settings.slack.webhook;
+  if (!webhook) { await sleep(300); return 'Posted (demo — no webhook configured)'; }
+  const resp = await fetch(webhook, { method:'POST', body: JSON.stringify(payload) });
+  if (!resp.ok) throw new Error(`Slack HTTP ${resp.status}`);
+  return `Posted to ${settings.slack.channel||'Slack'}`;
+}
+
+/* ================================================================
+   SETTINGS — Smartsheet column discovery
+   ================================================================ */
+async function discoverSmartsheetColumns() {
+  const resultEl = document.getElementById('ssDiscoverResult');
+  resultEl.innerHTML = '<div style="font-size:12px;color:var(--blue)">🔍 Discovering columns…</div>';
+  const url = document.getElementById('ssSheetUrl').value.trim();
+  let sheetId = settings.smartsheet.sheetId;
+
+  // Try to extract sheet ID from URL
+  const match = url.match(/\/sheets\/(\d+)/);
+  if (match) sheetId = match[1];
+
+  try {
+    const resp = await fetch(`https://api.smartsheet.com/2.0/sheets/${sheetId}?include=columnIds`, {
+      credentials:'include', headers:{'Accept':'application/json'}
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    const cols = data.columns || [];
+    settings.smartsheet.sheetId = sheetId;
+    settings.smartsheet.discoveredColumns = cols;
+    lsSet('onehub_settings', settings);
+
+    resultEl.innerHTML = `<div class="test-result test-ok">✓ Found ${cols.length} columns</div>`;
+    renderColMapper(cols);
+  } catch {
+    resultEl.innerHTML = `<div class="test-result test-fail">✗ Could not reach Smartsheet. Are you logged in?</div>`;
+    // Demo mode: render with known columns
+    renderColMapperDemo();
+  }
+}
+
+function renderColMapper(cols) {
+  const fields = [
+    {key:'taskName', label:'Project Name (match column)'},
+    {key:'status', label:'Status (RAG)'},
+    {key:'stage', label:'Delivery Stage'},
+    {key:'commentary', label:'Status Commentary'},
+    {key:'comments', label:'Comments'},
+    {key:'priority', label:'Priority'},
+  ];
+  const opts = cols.map(c => `<option value="${c.id}">${c.title}</option>`).join('');
+  document.getElementById('ssColMap').innerHTML = `
+    <div style="font-size:12px;font-weight:700;color:var(--gray-4);margin-bottom:8px">MAP COLUMNS</div>
+    ${fields.map(f => `
+      <div class="col-map-row">
+        <div class="col-map-label">${f.label}</div>
+        <select class="col-map-select" onchange="settings.smartsheet.colMap['${f.key}']=parseInt(this.value);saveSettings()">
+          <option value="">— skip —</option>${opts}
+        </select>
+      </div>`).join('')}
+    <div style="margin-top:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--gray-4);margin-bottom:6px">STATUS VALUE MAPPING</div>
+      <div style="font-size:12px;color:var(--gray-4)">
+        GREEN → <input style="width:50px;padding:3px 6px;border:1px solid var(--gray-2);border-radius:4px" id="mapG" value="${settings.smartsheet.statusMap.GREEN}" oninput="settings.smartsheet.statusMap.GREEN=this.value;saveSettings()">
+        &nbsp; AMBER → <input style="width:50px;padding:3px 6px;border:1px solid var(--gray-2);border-radius:4px" id="mapY" value="${settings.smartsheet.statusMap.AMBER}" oninput="settings.smartsheet.statusMap.AMBER=this.value;saveSettings()">
+        &nbsp; RED → <input style="width:50px;padding:3px 6px;border:1px solid var(--gray-2);border-radius:4px" id="mapR" value="${settings.smartsheet.statusMap.RED}" oninput="settings.smartsheet.statusMap.RED=this.value;saveSettings()">
+      </div>
+    </div>`;
+}
+
+function renderColMapperDemo() {
+  document.getElementById('ssColMap').innerHTML = `
+    <div style="font-size:12px;color:var(--gray-4);padding:8px;background:var(--gold-lt);border-radius:6px;border-left:3px solid var(--gold)">
+      ⚠️ Demo mode — using saved column mappings. Log into Smartsheet and click Discover to refresh.
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:var(--gray-4)">
+      <b>Status mapping:</b> GREEN→${settings.smartsheet.statusMap.GREEN}, AMBER→${settings.smartsheet.statusMap.AMBER}, RED→${settings.smartsheet.statusMap.RED}
+    </div>`;
+}
+
+function toggleSlackConfig() {
+  const el = document.getElementById('slackConfig');
+  if (el) el.style.display = document.getElementById('chSlack').checked ? 'block' : 'none';
+}
+
+async function testSlack() {
+  const res = document.getElementById('slackTestResult');
+  res.innerHTML = '<div style="font-size:11px;color:var(--blue)">Testing…</div>';
+  const webhook = document.getElementById('slackWebhook').value;
+  if (!webhook) { res.innerHTML = '<div class="test-result test-fail">No webhook URL entered.</div>'; return; }
+  try {
+    await fetch(webhook, { method:'POST', body: JSON.stringify({ text: '✅ OneHub test connection successful!' }) });
+    res.innerHTML = '<div class="test-result test-ok">✓ Slack connection working!</div>';
+  } catch {
+    res.innerHTML = '<div class="test-result test-fail">✗ Could not reach webhook. Check the URL.</div>';
+  }
+}
+
+/* ================================================================
+   RENDER DONE SCREEN
+   ================================================================ */
+function renderDoneScreen(results, channels) {
+  const p = parsed;
+  const activeCount = channels.length;
+
+  document.getElementById('channelCount').textContent = activeCount;
+  // 3–6 min/system avg = 4.5 min mid; OneHub = 0.75 min → ~3.75 min saved per system
+  const savedPerUpdate = Math.round(activeCount * 4.5);
+  document.getElementById('timeSavedNum').textContent = `~${savedPerUpdate} min`;
+  // 7–10 updates/week avg = 8.5; weekly saved = savedPerUpdate * 8.5
+  const weeklySaved = Math.round(savedPerUpdate * 8.5);
+  const weeklySavedEl = document.getElementById('weeklySaved');
+  if (weeklySavedEl) weeklySavedEl.textContent = `~${weeklySaved} min/week`;
+
+  // Receipts
+  document.getElementById('writeReceipts').innerHTML = channels.map(ch => {
+    const r = results[ch.id];
+    const state = r?.ok ? 'done' : 'failed';
+    const stateClass = r?.ok ? 'green' : 'red';
+    return `<div class="write-target ${state}">
+      <div class="wt-icon">${ch.icon}</div>
+      <div class="wt-name">${ch.name}</div>
+      <div class="wt-status ${stateClass}">${r?.ok?'✓':'✗'} ${r?.msg||''}</div>
+    </div>`;
+  }).join('');
+
+  // Leadership card
+  document.getElementById('scProject').textContent = p.projectLabel;
+  const ragClass = p.rag==='GREEN'?'rag-green':p.rag==='AMBER'?'rag-gold':'rag-red';
+  const ragIcon  = p.rag==='GREEN'?'🟢':p.rag==='AMBER'?'🟡':'🔴';
+  document.getElementById('scGrid').innerHTML = `
+    <div class="sc-stat">
+      <div class="sc-stat-label">RAG Status</div>
+      <div class="sc-stat-val"><span class="sc-rag ${ragClass}">${ragIcon} ${p.rag}</span></div>
+    </div>
+    <div class="sc-stat">
+      <div class="sc-stat-label">Progress</div>
+      <div class="sc-stat-val">${p.pct!==null?p.pct+'%':'—'}</div>
+      <div class="sc-stat-sub">${p.progress}</div>
+    </div>
+    <div class="sc-stat">
+      <div class="sc-stat-label">Priority</div>
+      <div class="sc-stat-val">${p.priority}</div>
+      <div class="sc-stat-sub">Confidence: ${p.confidence}%</div>
+    </div>`;
+
+  document.getElementById('scStatusBody').textContent = p.summary;
+  if (p.blocker) { document.getElementById('scBlockerBody').textContent = p.blocker; }
+  else { document.getElementById('scBlockerSection').style.display='none'; }
+  if (p.nextSteps) { document.getElementById('scNextBody').textContent = p.nextSteps; }
+  else { document.getElementById('scNextSection').style.display='none'; }
+
+  // What's Next agent cards
+  renderWhatsNext(p);
+}
+
+/* ================================================================
+   DASHBOARD
+   ================================================================ */
+function renderDashboard() {
+  const history = updateHistory;
+  const ragCount = { GREEN:0, AMBER:0, RED:0, none:0 };
+
+  // Build latest per project
+  const latest = {};
+  for (const h of history) {
+    if (!latest[h.project]) latest[h.project] = h;
+    ragCount[h.rag] = (ragCount[h.rag]||0) + 1;
+  }
+
+  // Merge with all known projects
+  for (const proj of settings.projects) {
+    if (!latest[proj.label]) {
+      latest[proj.label] = { project: proj.key+' · '+proj.label, projectKey: proj.key, projectLabel: proj.label, rag: null, summary: 'No update submitted yet.', timestamp: null };
+      ragCount.none++;
+    }
+  }
+
+  document.getElementById('dashStats').innerHTML = `
+    <div class="dash-stat"><div class="ds-num ds-green">${ragCount.GREEN||0}</div><div class="ds-label">🟢 On Track</div></div>
+    <div class="dash-stat"><div class="ds-num ds-gold">${ragCount.AMBER||0}</div><div class="ds-label">🟡 At Risk</div></div>
+    <div class="dash-stat"><div class="ds-num ds-red">${ragCount.RED||0}</div><div class="ds-label">🔴 Off Track</div></div>
+    <div class="dash-stat"><div class="ds-num ds-gray">${ragCount.none||0}</div><div class="ds-label">⬜ No Update</div></div>`;
+
+  document.getElementById('dashGrid').innerHTML = Object.values(latest).map(h => {
+    const ragCls = h.rag==='GREEN'?'rag-g':h.rag==='AMBER'?'rag-y':h.rag==='RED'?'rag-r':'rag-none';
+    const ragIcon = h.rag==='GREEN'?'🟢':h.rag==='AMBER'?'🟡':h.rag==='RED'?'🔴':'⬜';
+    const ago = h.timestamp ? timeAgo(h.timestamp) : 'Never';
+    return `<div class="dash-card ${ragCls}">
+      <div class="dc-project">${ragIcon} ${h.projectLabel||h.project}</div>
+      <div class="dc-summary">${h.summary}</div>
+      <div class="dc-meta">
+        <span>${ago}</span>
+        <button class="dc-update-btn" onclick="prefillProject('${h.projectKey||''}')">Update Now</button>
+      </div>
+    </div>`;
+  }).join('') || '<div style="color:var(--gray-3);font-size:14px;padding:20px 0">No updates submitted yet. Submit your first update!</div>';
+}
+
+function timeAgo(ts) {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff/60000);
+  if (m < 2) return 'Just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m/60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h/24)}d ago`;
+}
+
+function prefillProject(key) {
+  if (key) document.getElementById('projectSelect').value = key;
+  showScreen('screenInput');
+  document.getElementById('updateInput').focus();
+}
+
+/* ================================================================
+   SETTINGS UI RENDER
+   ================================================================ */
+function renderSettingsUI() {
+  const s = settings;
+  document.getElementById('toggleRealAI').checked = s.useRealAI;
+  document.getElementById('claudeApiKey').value = s.claudeApiKey;
+  document.getElementById('jiraPat').value = s.jiraPat || '';
+  document.getElementById('smartsheetToken').value = s.smartsheetToken || '';
+  document.getElementById('chJira').checked = s.channels.jira;
+  document.getElementById('chSmartsheet').checked = s.channels.smartsheet;
+  document.getElementById('chSlack').checked = s.channels.slack;
+  document.getElementById('slackWebhook').value = s.slack.webhook;
+  document.getElementById('slackChannel').value = s.slack.channel;
+  document.getElementById('ssSheetUrl').value = s.smartsheet.sheetUrl;
+  if (s.channels.slack) document.getElementById('slackConfig').style.display = 'block';
+  updateLiveDots();
+  updateReadinessBar();
+
+  // Projects list
+  document.getElementById('projectsList').innerHTML = s.projects.map((p,i) => `
+    <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+      <input class="settings-input" style="width:100px;margin:0" value="${p.key}" oninput="settings.projects[${i}].key=this.value;saveSettings()" placeholder="CGCX-000">
+      <input class="settings-input" style="flex:1;margin:0" value="${p.label}" oninput="settings.projects[${i}].label=this.value;saveSettings()" placeholder="Project name">
+      <button class="btn btn-sm btn-danger" onclick="removeProject(${i})">✕</button>
+    </div>`).join('');
+
+  // AI label update
+  const aiModeLabel = document.getElementById('aiModeLabel');
+  if (aiModeLabel) aiModeLabel.textContent = s.useRealAI && s.claudeApiKey ? 'Powered by Claude API · Live AI' : 'Powered by Claude · Local engine';
+
+  // Show demo col mapper
+  if (!s.smartsheet.discoveredColumns?.length) renderColMapperDemo();
+}
+
+function addProject() {
+  settings.projects.push({ key: 'CGCX-000', label: 'New Project' });
+  saveSettings();
+  renderSettingsUI();
+}
+function removeProject(i) {
+  settings.projects.splice(i, 1);
+  saveSettings();
+  renderSettingsUI();
+}
+
+/* ================================================================
+   COPY SUMMARY FOR SLACK
+   ================================================================ */
+function copyCard() {
+  const p = parsed;
+  const ragIcon = p.rag==='GREEN'?'🟢':p.rag==='AMBER'?'🟡':'🔴';
+  const lines = [
+    `*${p.projectLabel}* — Status Update`,
+    `${ragIcon} *${p.rag}* | ${p.progress}${p.pct!==null?` (${p.pct}%)`:''}  | ${p.priority}`,
+    '',
+    p.summary,
+    p.blocker ? `⚠️ *Blocker:* ${p.blocker}` : '',
+    p.nextSteps ? `▶️ *Next:* ${p.nextSteps}` : '',
+    '',
+    `_Posted via OneHub_`
+  ].filter(Boolean).join('\n');
+  navigator.clipboard.writeText(lines).then(()=>toast('Copied for Slack!')).catch(()=>toast('Select and copy manually.'));
+}
+
+/* ================================================================
+   WHAT'S NEXT — EXEC-UPDATE AGENT CHAINS
+   ================================================================ */
+function renderWhatsNext(p) {
+  const escalateCard = document.getElementById('wnEscalate');
+  const escalateBadge = document.getElementById('wnEscalateBadge');
+  const stakeholderCard = document.getElementById('wnStakeholder');
+  const stakeholderBadge = document.getElementById('wnStakeholderBadge');
+  const retroCard = document.getElementById('wnRetro');
+  const retroBadge = document.getElementById('wnRetroBadge');
+  if (!escalateCard) return;
+
+  const isRed    = p.rag === 'RED';
+  const isAmber  = p.rag === 'AMBER';
+  const isGreen  = p.rag === 'GREEN';
+  const isDone   = p.progress === 'COMPLETED';
+
+  // Escalate: prominent for RED, dimmed for GREEN/AMBER
+  escalateCard.classList.toggle('wn-dim', !isRed);
+  escalateBadge.style.display = isRed ? 'inline-block' : 'none';
+
+  // Stakeholder: prominent for AMBER, dimmed for RED/GREEN
+  stakeholderCard.classList.toggle('wn-dim', !isAmber);
+  stakeholderBadge.style.display = isAmber ? 'inline-block' : 'none';
+
+  // Retro: prominent for COMPLETED, dimmed otherwise
+  retroCard.classList.toggle('wn-dim', !isDone);
+  retroBadge.style.display = isDone ? 'inline-block' : 'none';
+}
+
+function wnCopy(type) {
+  const p = parsed || {};
+  const proj = p.projectLabel || 'this project';
+  const blocker = p.blocker ? ` Blocker: ${p.blocker}.` : '';
+  const summary = p.summary ? p.summary.substring(0, 120) : '';
+  const rag = p.rag || '';
+
+  let cmd = '';
+  let label = '';
+
+  if (type === 'escalate') {
+    // Trigger: "Escalating a risk or blocker" / "Requesting a decision from leadership"
+    cmd = `Escalating a risk or blocker for ${proj} — RAG is ${rag}.${blocker} ${summary} Requesting a decision from leadership.`;
+    label = '🚨 Escalation phrase';
+  } else if (type === 'stakeholder') {
+    // Trigger: "write a status update" / "weekly update for leadership"
+    cmd = `Write a status update for ${proj} — weekly update for leadership. ${summary}${blocker}`;
+    label = '📢 Stakeholder update phrase';
+  } else if (type === 'slides') {
+    // Trigger: "Internal Intuit presentations (leadership, QBR, team updates)"
+    cmd = `Create a leadership presentation for ${proj} — team update. ${summary}`;
+    label = '🖥️ Presentation phrase';
+  } else if (type === 'slack') {
+    // Trigger: "what's happening in #channel-name?" / "summarize Slack channel content"
+    cmd = `What's happening in #${proj.toLowerCase().replace(/\s+/g,'-')}? Summarize themes and identify action items.`;
+    label = '🔍 Slack summary phrase';
+  } else if (type === 'metrics') {
+    // Trigger: "how are we tracking" / "metrics vs targets"
+    cmd = `How are we tracking on ${proj}? Show metrics vs targets and produce a metrics health report.`;
+    label = '📊 Metrics check phrase';
+  } else if (type === 'retro') {
+    // Trigger: "After an epic, feature, or major milestone ships"
+    cmd = `Run a retrospective for ${proj} — after a milestone. ${summary} Capture learnings and log institutional knowledge.`;
+    label = '🔁 Retrospective phrase';
+  }
+
+  navigator.clipboard.writeText(cmd).then(() => {
+    wnToast(`${label} copied! Paste into Cowork or Claude Code.`);
+  }).catch(() => {
+    wnToast('Copy failed — check browser permissions.');
+  });
+}
+
+let wnToastEl = null;
+let wnToastTimer = null;
+function wnToast(msg) {
+  if (!wnToastEl) {
+    wnToastEl = document.createElement('div');
+    wnToastEl.className = 'wn-toast';
+    document.body.appendChild(wnToastEl);
+  }
+  wnToastEl.textContent = msg;
+  wnToastEl.style.display = 'block';
+  clearTimeout(wnToastTimer);
+  wnToastTimer = setTimeout(() => { if (wnToastEl) wnToastEl.style.display = 'none'; }, 3200);
+}
+
+/* ================================================================
+   LIVE READINESS — dots, bar, connection tests
+   ================================================================ */
+function updateLiveDots() {
+  const jiraDot = document.getElementById('jiraDot');
+  const ssDot   = document.getElementById('smartsheetDot');
+  if (jiraDot) {
+    const hasPat = !!(settings.jiraPat || '').trim();
+    jiraDot.className = 'live-dot' + (hasPat ? ' live' : '');
+    jiraDot.title = hasPat ? 'PAT configured' : 'Not configured — using browser SSO';
+  }
+  if (ssDot) {
+    const hasToken = !!(settings.smartsheetToken || '').trim();
+    ssDot.className = 'live-dot' + (hasToken ? ' live' : '');
+    ssDot.title = hasToken ? 'Token configured' : 'Not configured';
+  }
+}
+
+function updateReadinessBar() {
+  const bar  = document.getElementById('readinessBar');
+  const text = document.getElementById('readinessText');
+  if (!bar || !text) return;
+  const hasPat   = !!(settings.jiraPat || '').trim();
+  const hasToken = !!(settings.smartsheetToken || '').trim();
+  const jiraOn   = settings.channels?.jira;
+  const ssOn     = settings.channels?.smartsheet;
+  const liveJira = !jiraOn || hasPat;
+  const liveSS   = !ssOn   || hasToken;
+  if (liveJira && liveSS && (jiraOn || ssOn)) {
+    bar.className = 'readiness-bar live';
+    text.innerHTML = '✅ Live mode — updates will write to real Jira & Smartsheet.';
+  } else if (hasPat || hasToken) {
+    bar.className = 'readiness-bar partial';
+    const missing = [!hasPat && jiraOn ? 'Jira PAT' : '', !hasToken && ssOn ? 'Smartsheet token' : ''].filter(Boolean).join(' & ');
+    text.innerHTML = `⚠️ Partial live mode — ${missing} missing. <span class="rb-link" onclick="safeNavigate('screenSettings')">Finish setup →</span>`;
+  } else {
+    bar.className = 'readiness-bar demo';
+    text.innerHTML = `⚙️ Demo mode — writes are simulated. <span class="rb-link" onclick="safeNavigate('screenSettings')">Add credentials in Settings →</span>`;
+  }
+}
+
+async function testJira() {
+  const res = document.getElementById('jiraTestResult');
+  const pat = (document.getElementById('jiraPat')?.value || '').trim();
+  res.innerHTML = '<div style="font-size:12px;color:var(--blue)">🔄 Testing…</div>';
+  const headers = { 'Accept':'application/json' };
+  if (pat) headers['Authorization'] = `Basic ${btoa(`mike_sedillo@intuit.com:${pat}`)}`;
+  try {
+    const resp = await fetch(
+      `https://api.atlassian.com/ex/jira/${CLOUD_ID}/rest/api/3/myself`,
+      { headers, ...(pat ? {} : {credentials:'include'}) }
+    );
+    if (resp.ok) {
+      const data = await resp.json();
+      res.innerHTML = `<div class="test-result test-ok">✓ Connected as ${data.displayName || data.emailAddress}</div>`;
+      document.getElementById('jiraDot').className = 'live-dot live';
+    } else {
+      res.innerHTML = `<div class="test-result test-fail">✗ HTTP ${resp.status} — check your PAT or try browser SSO (leave blank)</div>`;
+      document.getElementById('jiraDot').className = 'live-dot error';
+    }
+  } catch(e) {
+    res.innerHTML = `<div class="test-result test-fail">✗ Network error — ${e.message}</div>`;
+    document.getElementById('jiraDot').className = 'live-dot error';
+  }
+}
+
+async function testSmartsheet() {
+  const res = document.getElementById('smartsheetTestResult');
+  const token = (document.getElementById('smartsheetToken')?.value || '').trim();
+  res.innerHTML = '<div style="font-size:12px;color:var(--blue)">🔄 Testing…</div>';
+  if (!token) {
+    res.innerHTML = '<div class="test-result test-fail">✗ Enter a Smartsheet API token first.</div>';
+    return;
+  }
+  try {
+    const resp = await fetch('https://api.smartsheet.com/2.0/users/me', {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept':'application/json' }
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      res.innerHTML = `<div class="test-result test-ok">✓ Connected as ${data.firstName} ${data.lastName} (${data.email})</div>`;
+      document.getElementById('smartsheetDot').className = 'live-dot live';
+    } else {
+      res.innerHTML = `<div class="test-result test-fail">✗ HTTP ${resp.status} — invalid token</div>`;
+      document.getElementById('smartsheetDot').className = 'live-dot error';
+    }
+  } catch(e) {
+    res.innerHTML = `<div class="test-result test-fail">✗ Network error — ${e.message}</div>`;
+    document.getElementById('smartsheetDot').className = 'live-dot error';
+  }
+}
+
+/* ================================================================
+   UTILS
+   ================================================================ */
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 3000);
+}
+
+/* ================================================================
+   INIT
+   ================================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+  // Populate project dropdown from settings
+  const sel = document.getElementById('projectSelect');
+  sel.innerHTML = '<option value="">— Select a project —</option>' +
+    settings.projects.map(p => `<option value="${p.key}">${p.key} · ${p.label}</option>`).join('');
+  // Update project history list
+  if (updateHistory.length > 0) renderHistoryList();
+  // Show live readiness state on load
+  updateReadinessBar();
+  updateLiveDots();
+});
+
+function renderHistoryList() {
+  const ragClass = r => r==='GREEN'?'badge-green':r==='AMBER'?'badge-gold':'badge-red';
+  const ragIcon  = r => r==='GREEN'?'🟢':r==='AMBER'?'🟡':'🔴';
+  document.getElementById('historyList').innerHTML = updateHistory.slice(0,5).map(h => `
+    <div class="hist-row">
+      <div class="hist-dot" style="background:${h.rag==='GREEN'?'var(--green)':h.rag==='AMBER'?'var(--gold)':'var(--red)'}"></div>
+      <div>
+        <strong>${h.projectLabel||h.project}</strong>
+        <div class="hist-meta">${timeAgo(h.timestamp)} · <span class="badge ${ragClass(h.rag)}">${ragIcon(h.rag)} ${h.rag}</span></div>
+        <div style="font-size:13px;color:var(--gray-4);margin-top:4px">${h.summary}</div>
+      </div>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>
